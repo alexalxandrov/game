@@ -249,13 +249,18 @@ class RepublicDashboardUI {
         const demand = document.createElement('p'); demand.textContent = g.demand;
         const stance = document.createElement('small'); stance.textContent = `${g.stance} · недовольство ${g.grievance}/100`;
         copy.append(top,demand,stance);
-        const action = document.createElement('button'); action.type = 'button'; action.className = 'agenda-talk'; action.textContent = 'Обсудить'; action.dataset.negotiateGroup = g.id; action.setAttribute('aria-label', `Начать переговоры: ${g.name}`);
+        const action = document.createElement('button'); action.type = 'button'; action.className = 'agenda-talk'; action.textContent = g.id==='hardliners'?'Ответить публично':'Обсудить'; action.dataset.negotiateGroup = g.id; action.setAttribute('aria-label', g.id==='hardliners'?'Опубликовать обязательство для радикальной группы':`Начать переговоры: ${g.name}`);
         row.append(copy,action); agenda.append(row);
       });
     }
   }
 
   openNegotiations(groupId = null) {
+    if(groupId==='hardliners') {
+      const promise=this.sim.makePromise('hardliners');
+      this.toast('Прямого представителя нет',promise?'Вместо прямых переговоров опубликовано публичное обязательство. Срок и исполнение останутся в журнале.':'Публичное обязательство пока не создано.','warning');
+      this.renderAll(true);return;
+    }
     this.sim.startNegotiations(groupId);
     this.renderNegotiation();
   }

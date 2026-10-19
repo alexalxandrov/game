@@ -20,6 +20,15 @@ class RepublicCityScene extends Phaser.Scene {
     this._createPersonTextures();
     this._createVehicleTextures();
     this.add.image(640, 320, 'city-background').setDepth(0);
+    // Seamless background continuations let the monitor pan between city sectors without exposing empty canvas.
+    this.add.image(-640, 320, 'city-background').setDepth(0).setAlpha(0.96);
+    this.add.image(1920, 320, 'city-background').setDepth(0).setAlpha(0.96);
+    this.add.image(640, -320, 'city-background').setDepth(0).setAlpha(0.96);
+    this.add.image(640, 960, 'city-background').setDepth(0).setAlpha(0.96);
+    this.add.image(-640, -320, 'city-background').setDepth(0).setAlpha(0.96);
+    this.add.image(1920, -320, 'city-background').setDepth(0).setAlpha(0.96);
+    this.add.image(-640, 960, 'city-background').setDepth(0).setAlpha(0.96);
+    this.add.image(1920, 960, 'city-background').setDepth(0).setAlpha(0.96);
     this._seedTraffic();
     this.night = this.add.graphics().setDepth(9000);
     this.fx = this.add.graphics().setDepth(9001);
@@ -441,14 +450,19 @@ class RepublicCityScene extends Phaser.Scene {
     const s = this.sim.state;
     const ratio = WORLD_U.clamp((s.crowdTarget || 520) / Math.max(1, s.cityPopulation || 5000), 0, 1);
     const spread = 1 - ratio * 0.20;
-    const x = WORLD_U.clamp(640 + WORLD_U.random(-570, 570) * spread, 42, 1238);
-    const y = WORLD_U.clamp(336 + WORLD_U.random(-3, 185), 314, 522);
+    const r=Math.random();
+    const districtId=r<0.38?'center':r<0.55?'station':r<0.74?'workers':r<0.86?'ring':'suburbs';
+    const anchors={center:{x:640,y:421},station:{x:220,y:413},workers:{x:360,y:491},ring:{x:1010,y:490},suburbs:{x:1100,y:368}};
+    const anchor=anchors[districtId]||anchors.center;
+    const localSpread=districtId==='center'?430:districtId==='suburbs'?95:120;
+    const x = WORLD_U.clamp(anchor.x + WORLD_U.random(-localSpread, localSpread) * spread, 18, 1262);
+    const y = WORLD_U.clamp(anchor.y + WORLD_U.random(-45,45), 300, 530);
     const sprite = this.add.image(x, y, baseTexture).setOrigin(0.5, 0.78).setDepth(y + 2);
     sprite.setScale(WORLD_U.clamp(0.62 + (y - 320) / 480, 0.62, 1.08));
     if (picked.type === 'supporter' && Math.random() < 0.45) sprite.setTint(0xf3efe1);
     const agent = {
       sprite, x, y, tx: x + WORLD_U.random(-95, 95), ty: y + WORLD_U.random(-36, 36),
-      type: picked.type, behavior: picked.behavior, groupId:picked.groupId, demand:picked.demand,
+      type: picked.type, behavior: picked.behavior, role:picked.role||picked.behavior, districtId, groupId:picked.groupId, demand:picked.demand,
       protester:!!picked.protester, sign:picked.sign, baseTexture,
       speed: WORLD_U.random(18, 38), timer: WORLD_U.random(0.2, 1.4), wobble: Math.random() * 10,
       wait: WORLD_U.random(0, 0.3), lastFlee: 0, interactionCooldown:WORLD_U.random(0,3),
@@ -559,8 +573,10 @@ class RepublicCityScene extends Phaser.Scene {
     if (!this.crowdPolice || this.crowdPolice.length !== desiredPolice) {
       (this.crowdPolice || []).forEach(p => p.destroy());
       this.crowdPolice = [];
+      const policeAnchors=[{x:640,y:405},{x:220,y:405},{x:360,y:480},{x:1010,y:480},{x:1100,y:365}];
       for (let i = 0; i < desiredPolice; i++) {
-        const x = 430 + (i % 9) * 47 + WORLD_U.random(-8, 8), y = 368 + Math.floor(i / 9) * 24 + WORLD_U.random(-3, 3);
+        const home=policeAnchors[i%policeAnchors.length];
+        const x = WORLD_U.clamp(home.x + ((Math.floor(i/5)%3)-1)*28 + WORLD_U.random(-8,8),22,1258), y = WORLD_U.clamp(home.y + Math.floor(i/15)*16 + WORLD_U.random(-3,3),300,535);
         const sprite = this.add.image(x, y, `person-police-${i % 3}`).setOrigin(0.5, 0.78).setDepth(y + 5).setScale(0.78 + (y - 320) / 470);
         sprite.setData('formationIndex', i); sprite.setData('baseX', x); sprite.setData('baseY', y);
         this.crowdPolice.push(sprite);
@@ -569,43 +585,50 @@ class RepublicCityScene extends Phaser.Scene {
   }
 
   _updatePeople(dt, s) {
-    const tension = s.tension;
-    const center = { x: 640, y: 421 };
+    const globalTension = s.tension;
+    const defaultCenter = { x: 640, y: 421 };
+    const anchors={center:{x:640,y:421},station:{x:220,y:413},workers:{x:360,y:491},ring:{x:1010,y:490},suburbs:{x:1100,y:368}};
     const ratio = (s.crowdTarget || 500) / Math.max(1, s.cityPopulation || 5000);
     for (const a of this.people) {
+      const center=anchors[a.districtId]||defaultCenter;
+      const district=(s.districts||[]).find(d=>d.id===a.districtId);
+      const localTension=district?district.tension:globalTension;
+      const localBlockage=district?Math.max(s.roadBlockage*0.45,district.blockage):s.roadBlockage;
       a.timer -= dt;
       a.wait = Math.max(0, (a.wait || 0) - dt); // waiting must expire; otherwise every sprite stays frozen forever.
       a.interactionCooldown = Math.max(0, (a.interactionCooldown || 0) - dt);
       if (a.timer <= 0) {
-        const panic = tension > 76 && (a.behavior === 'volatile' || (a.protester && Math.random() < 0.10) || Math.random() < 0.045);
+        const panic = localTension > 76 && (a.behavior === 'volatile' || (a.protester && Math.random() < 0.10) || Math.random() < 0.045);
         if (panic) {
           const awayX = a.x < center.x ? -1 : 1;
           a.tx = WORLD_U.clamp(a.x + awayX * WORLD_U.random(55, 170), 42, 1238);
           a.ty = WORLD_U.clamp(a.y + WORLD_U.random(-50, 35), 306, 524);
           a.speed = WORLD_U.random(54, 90); a.behavior = 'flee'; a.lastFlee = 3;
-        } else if (a.behavior === 'flee' && tension < 68) {
+        } else if (a.behavior === 'flee' && localTension < 68) {
           a.behavior = a.protester ? 'marcher' : (a.type === 'supporter' ? 'support' : 'peaceful');
-          a.speed = WORLD_U.random(24, 42); a.tx = WORLD_U.random(360, 920); a.ty = WORLD_U.random(340, 510);
-        } else if (a.behavior === 'blocker' && tension > 60 && Math.random() < 0.68) {
-          a.tx = WORLD_U.clamp(WORLD_U.random(470, 820), 450, 830);
-          a.ty = s.roadBlockage > 0.36 ? WORLD_U.random(550, 603) : WORLD_U.random(515, 535);
+          a.speed = WORLD_U.random(24, 42); a.tx = WORLD_U.clamp(center.x+WORLD_U.random(-180,180),18,1262); a.ty = WORLD_U.clamp(center.y+WORLD_U.random(-70,70),300,535);
+        } else if (a.behavior === 'blocker' && localTension > 60 && Math.random() < 0.68) {
+          a.tx = WORLD_U.clamp(center.x + WORLD_U.random(-95,95),24,1256);
+          a.ty = localBlockage > 0.36 ? WORLD_U.random(550,603) : WORLD_U.random(515,535);
           a.speed = WORLD_U.random(17, 35);
         } else if (a.protester && ['marcher','chant','occupy','blocker'].includes(a.behavior)) {
           const tightness = 1 - Math.min(0.48, ratio * 0.38);
-          a.tx = WORLD_U.clamp(center.x + WORLD_U.random(-365,365)*tightness, 56, 1224);
-          a.ty = WORLD_U.clamp((a.behavior === 'blocker' && tension > 60 ? 511 : 417) + WORLD_U.random(-92,94), 315, 532);
+          const localSpan=a.districtId==='center'?365:130;
+          a.tx = WORLD_U.clamp(center.x + WORLD_U.random(-localSpan,localSpan)*tightness,18,1262);
+          a.ty = WORLD_U.clamp((a.behavior === 'blocker' && localTension > 60 ? 550 : center.y) + WORLD_U.random(a.behavior === 'blocker' ? -25 : -70,a.behavior === 'blocker' ? 55 : 78), 315, a.behavior === 'blocker' ? 610 : 535);
           a.speed = a.behavior === 'chant' ? WORLD_U.random(16,29) : WORLD_U.random(25,52);
-          if (tension > 70 && a.type === 'agitator' && Math.random() < 0.28) a.behavior = 'volatile';
+          if (localTension > 70 && a.type === 'agitator' && Math.random() < 0.28) a.behavior = 'volatile';
         } else {
-          if (tension > 60 && s.roadBlockage > 0.36 && a.protester && Math.random() < 0.22) {
+          if (localTension > 60 && localBlockage > 0.36 && a.protester && Math.random() < 0.22) {
             a.behavior = 'blocker';
-            a.tx = WORLD_U.clamp(WORLD_U.random(480, 800), 460, 820);
+            a.tx = WORLD_U.clamp(center.x + WORLD_U.random(-100,100),24,1256);
             a.ty = WORLD_U.random(550, 600); a.speed = WORLD_U.random(16, 30);
           } else {
-            const gathering = tension > 44;
+            const gathering = localTension > 44;
             const radius = gathering ? (ratio > 0.42 ? 520 : 430) : 520;
-            a.tx = WORLD_U.clamp((gathering ? center.x : 640) + WORLD_U.random(-radius, radius), 42, 1238);
-            a.ty = WORLD_U.clamp((gathering ? 421 : 408) + WORLD_U.random(-102, 112), 306, 525);
+            const localRadius=a.districtId==='center'?radius:Math.min(165,radius*0.4);
+            a.tx = WORLD_U.clamp(center.x + WORLD_U.random(-localRadius, localRadius),18,1262);
+            a.ty = WORLD_U.clamp(center.y + WORLD_U.random(-70,78),300,535);
           }
           if (a.type === 'supporter') a.tx = WORLD_U.clamp(a.tx + (a.x < center.x ? 32 : -32), 52, 1228);
           a.speed = WORLD_U.random(20, 42);
@@ -628,7 +651,7 @@ class RepublicCityScene extends Phaser.Scene {
         } else a.timer = 0;
       }
       a.x = WORLD_U.clamp(a.x, 36, 1242);
-      const canEnterRoad = a.behavior === 'blocker' && tension > 60 && s.roadBlockage > 0.30;
+      const canEnterRoad = a.behavior === 'blocker' && localTension > 60 && localBlockage > 0.30;
       a.y = WORLD_U.clamp(a.y, 292, canEnterRoad ? 610 : 535);
       const moved = Math.hypot(a.x-oldX,a.y-oldY);
       a.phase += dt * (3 + moved * 0.18);
@@ -644,21 +667,21 @@ class RepublicCityScene extends Phaser.Scene {
       } else if (a.sprite.texture.key !== a.baseTexture) a.sprite.setTexture(a.baseTexture);
 
       // Clashes, retreats and thrown objects are event-driven and intentionally abstract.
-      if (dt > 0 && a.interactionCooldown <= 0 && tension > 58 && a.type === 'agitator' && a.behavior !== 'flee') {
+      if (dt > 0 && a.interactionCooldown <= 0 && localTension > 58 && a.type === 'agitator' && a.behavior !== 'flee') {
         let nearestOfficer = null, officerDist = Infinity;
         for (const officer of (this.crowdPolice || [])) {
           const ox = officer.x - a.x, oy = officer.y - a.y, d2 = ox*ox + oy*oy;
           if (d2 < officerDist) { officerDist = d2; nearestOfficer = officer; }
         }
-        const clashOdds = tension > 80 ? 0.16 : tension > 69 ? 0.095 : 0.045;
+        const clashOdds = localTension > 80 ? 0.16 : localTension > 69 ? 0.095 : 0.045;
         if (nearestOfficer && officerDist < 3600 && Math.random() < clashOdds) {
           this.interactionMarks.push({ type:'police-contact', x:a.x, y:a.y, expires:this.currentTime+1050 });
           const direction = a.x < nearestOfficer.x ? -1 : 1;
           a.behavior = 'flee'; a.tx = WORLD_U.clamp(a.x + direction * WORLD_U.random(42,115), 42,1238);
           a.ty = WORLD_U.clamp(a.y + WORLD_U.random(-35,30), 302,530); a.speed = WORLD_U.random(46,76); a.timer = 1.9;
           a.interactionCooldown = WORLD_U.random(3.5,7.5);
-          if (Math.random() < 0.14 && this.sim.state.incidents.filter(inc => inc.status !== 'resolved').length < this.sim.config.maxIncidents) this.sim.addIncident(tension > 80 && Math.random() < 0.35 ? 'riot' : 'clash');
-        } else if (tension > 68 && Math.random() < (tension > 82 ? 0.13 : 0.08)) {
+          if (Math.random() < 0.14 && this.sim.state.incidents.filter(inc => inc.status !== 'resolved').length < this.sim.config.maxIncidents) this.sim.addIncident(localTension > 80 && Math.random() < 0.35 ? 'riot' : 'clash');
+        } else if (localTension > 68 && Math.random() < (localTension > 82 ? 0.13 : 0.08)) {
           this._launchCrowdProjectile(a); a.interactionCooldown = WORLD_U.random(4,7);
         } else a.interactionCooldown = WORLD_U.random(2.5,5.2);
       }
@@ -681,8 +704,8 @@ class RepublicCityScene extends Phaser.Scene {
 
   _launchCrowdProjectile(agent) {
     if (this.projectiles.length > 24) return;
-    const tension = this.sim.state.tension;
-    const firebrand = agent.behavior === 'arsonist' || Math.random() < (tension > 82 ? 0.43 : tension > 72 ? 0.32 : 0.20);
+    const localTension = this.sim.state.tension;
+    const firebrand = agent.behavior === 'arsonist' || Math.random() < (localTension > 82 ? 0.43 : localTension > 72 ? 0.32 : 0.20);
     const officers = this.crowdPolice || [];
     let nearest = null, dmin = Infinity;
     for (const officer of officers) { const d=(officer.x-agent.x)**2+(officer.y-agent.y)**2; if(d<dmin){dmin=d;nearest=officer;} }

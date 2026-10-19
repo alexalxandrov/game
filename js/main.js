@@ -1,7 +1,8 @@
 'use strict';
 
 (function bootKontur() {
-  const SAVE_KEY = 'kontur-republic-save-v2';
+  const SAVE_KEY = 'kontur-republic-save-v3';
+  const LEGACY_SAVE_KEY = 'kontur-republic-save-v2';
 
   function showFatal(message) {
     const parent = document.getElementById('game-container');
@@ -18,12 +19,21 @@
     // Initialise the government/economy panels even if the external graphics CDN is unreachable.
     window.gameSimulation = new RepublicSimulation();
     try {
-      const saved = localStorage.getItem(SAVE_KEY);
+      let saved = localStorage.getItem(SAVE_KEY);
+      let migrated = false;
+      if (!saved) {
+        saved = localStorage.getItem(LEGACY_SAVE_KEY);
+        migrated = Boolean(saved);
+      }
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.version === GAME_CONFIG.version && parsed.state && parsed.companies) {
+        const supported = parsed && parsed.state && Array.isArray(parsed.companies) &&
+          (parsed.version === GAME_CONFIG.version || String(parsed.version || '').startsWith('2.'));
+        if (supported) {
           window.gameSimulation.loadSnapshot(parsed);
-          document.getElementById('last-save-label').textContent = 'АВТОВОССТАНОВЛЕНО ИЗ БРАУЗЕРА';
+          document.getElementById('last-save-label').textContent = migrated
+            ? 'СОХРАНЕНИЕ v2 АДАПТИРОВАНО К v3'
+            : 'АВТОВОССТАНОВЛЕНО ИЗ БРАУЗЕРА';
         }
       }
     } catch (err) {
