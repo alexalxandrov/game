@@ -545,3 +545,9 @@ input[type="range"]::-moz-range-thumb { width: 8px; height: 8px; border: 2px sol
   .legal-tools button:last-child { grid-column:auto; }
 }
 .injury-breakdown { margin: 0 0 6px; color:var(--text-secondary); font:8px/1.4 ui-monospace,monospace; }
+
+
+/* v4 live plaza telemetry */
+.crowd-anger-strip{position:relative;z-index:7;margin:8px 10px 0;padding:8px 10px;border:1px solid rgba(150,170,158,.22);border-radius:5px;background:rgba(20,30,32,.92);color:#d7e0d8;font:10px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;display:grid;grid-template-columns:minmax(145px,1fr) 2fr;gap:6px 14px;align-items:center}
+.anger-label{display:flex;gap:9px;align-items:center;justify-content:space-between;letter-spacing:.07em}.anger-label span{color:#aebeb3}.anger-label strong{font-size:12px;color:#e4e0ce}.anger-track{height:5px;border-radius:4px;background:#2e3a3a;overflow:hidden}.anger-track i{display:block;height:100%;width:0;background:#65a596;transition:width .35s ease,background .35s ease}.casualty-live{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:7px 18px;color:#aebeb3}.casualty-live strong{color:#eee5d2;font-weight:700}.crisis-stat.danger strong{color:#e8796d}.police-command-panel .police-ai-status{margin-top:12px}.districts-panel .district-row{cursor:default}
+@media (max-width:1050px){.crowd-anger-strip{grid-template-columns:1fr;gap:5px}.casualty-live{gap:6px 12px}}

@@ -1,8 +1,9 @@
 'use strict';
 
 (function bootKontur() {
-  const SAVE_KEY = 'kontur-republic-save-v3';
-  const LEGACY_SAVE_KEY = 'kontur-republic-save-v2';
+  const SAVE_KEY = 'kontur-republic-save-v4';
+  const LEGACY_SAVE_KEY = 'kontur-republic-save-v3';
+  const LEGACY_SAVE_KEY_V2 = 'kontur-republic-save-v2';
 
   function showFatal(message) {
     const parent = document.getElementById('game-container');
@@ -23,16 +24,17 @@
       let migrated = false;
       if (!saved) {
         saved = localStorage.getItem(LEGACY_SAVE_KEY);
+        if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V2);
         migrated = Boolean(saved);
       }
       if (saved) {
         const parsed = JSON.parse(saved);
         const supported = parsed && parsed.state && Array.isArray(parsed.companies) &&
-          (parsed.version === GAME_CONFIG.version || String(parsed.version || '').startsWith('2.'));
+          (parsed.version === GAME_CONFIG.version || (String(parsed.version || '').startsWith('2.') || String(parsed.version || '').startsWith('3.')));
         if (supported) {
           window.gameSimulation.loadSnapshot(parsed);
           document.getElementById('last-save-label').textContent = migrated
-            ? 'СОХРАНЕНИЕ v2 АДАПТИРОВАНО К v3'
+            ? 'СТАРОЕ СОХРАНЕНИЕ АДАПТИРОВАНО К v4'
             : 'АВТОВОССТАНОВЛЕНО ИЗ БРАУЗЕРА';
         }
       }

@@ -116,26 +116,8 @@
         </section>
 
         <section class="panel police-command-panel">
-          <div class="panel-heading"><div><span class="section-index">03А / КОМАНДОВАНИЕ</span><h2>Автономная полиция</h2></div><span class="data-chip">ИИ + ПРИКАЗЫ</span></div>
-          <p class="panel-intro">Командование выбирает доктрину каждый модельный час. Руководство задаёт предел допустимой силы, а не гарантирует конкретное действие.</p>
-          <div class="command-select-row"><label for="doctrine-select">Приоритет штаба</label><select id="doctrine-select"><option value="observe">Наблюдение</option><option value="contain">Сдерживание</option><option value="disperse">Разгон</option><option value="protect">Защита объекта</option><option value="withdraw">Отступление</option></select></div>
-          <div class="force-cap-row"><label for="force-cap">Верхняя граница силы</label><strong id="force-cap-value">3/7</strong><input id="force-cap" type="range" min="0" max="7" value="3" step="1"><div class="range-ends"><span>Диалог</span><span>Крайняя мера</span></div></div>
-          <div class="police-command-grid">
-            <button type="button" data-crisis-action="police-talk" class="command-soft"><strong>Переговоры</strong><small>Линия диалога</small></button>
-            <button type="button" data-crisis-action="force-cordon" data-force-level="1"><strong>Кордон</strong><small>Защита объекта</small></button>
-            <button type="button" data-crisis-action="force-gas" data-force-level="2"><strong>Газ</strong><small>Зона паники/разгона · <b id="gas-stock">14</b></small></button>
-            <button type="button" data-crisis-action="force-water" data-force-level="3"><strong>Водомёт</strong><small>Зона воздействия · <b id="water-stock">10</b></small></button>
-            <button type="button" data-crisis-action="force-flash" data-force-level="3"><strong>Светошумовые</strong><small>Риск паники · <b id="flash-stock">8</b></small></button>
-            <button type="button" data-crisis-action="force-physical" data-force-level="4"><strong>Физический контакт</strong><small>Задержания и травмы</small></button>
-            <button type="button" data-crisis-action="force-rubber" data-force-level="5"><strong>Нелетальные боеприпасы</strong><small>Риск тяжёлых травм · <b id="rubber-stock">22</b></small></button>
-            <button type="button" data-crisis-action="force-live" data-force-level="7" class="command-danger"><strong>Огнестрельное оружие</strong><small>Крайняя мера · <b id="live-stock">4</b></small></button>
-            <button type="button" data-crisis-action="force-retreat"><strong>Отступить</strong><small>Снизить контакт</small></button>
-          </div>
-          <div class="police-command-footer">
-            <button type="button" data-crisis-action="police-corridor">Коридор служб</button>
-            <button type="button" data-crisis-action="police-rotate">Ротация смены</button>
-            <button type="button" data-crisis-action="police-reinforce">Внешнее подкрепление</button>
-          </div>
+          <div class="panel-heading"><div><span class="section-index">03А / АВТОНОМНАЯ СЛУЖБА</span><h2>Командование полиции · ИИ</h2></div><span class="data-chip">БЕЗ РУЧНЫХ ПРИКАЗОВ</span></div>
+          <p class="panel-intro">Командование самостоятельно оценивает события каждый модельный час, меняет доктрину, направляет патрули, организует кордоны и может отступить. Применение силы — внутреннее решение ИИ, а не настройка игрока.</p>
           <div class="police-ai-status"><span>Доктрина <strong id="police-doctrine-label">Наблюдение</strong></span><span>Мораль <strong id="police-morale-value">72%</strong></span><span>Усталость <strong id="police-fatigue-value">12%</strong></span></div>
         </section>
 
@@ -153,7 +135,7 @@
             <div class="world-title-wrap"><div class="scene-kicker"><span class="scene-live"></span> ГОРОДСКОЙ МОНИТОРИНГ <span class="scene-coordinates">ЦЕНТР ВЕРЕСКА · МОДЕЛЬНАЯ КАМЕРА</span></div><h1>Площадь Республики</h1><p id="world-subtitle">Гражданское собрание у здания правительства</p></div>
             <div class="world-metrics"><div><span>НА ПЛОЩАДИ · ОЦЕНКА</span><strong id="crowd-value">520</strong></div><div><span>ИНЦИДЕНТЫ</span><strong id="incident-value">00</strong></div><div><span>СПЕЦТРАНСПОРТ</span><strong id="vehicles-value">00</strong></div><div><span>ЗАГРУЗКА ДОРОГ</span><strong id="traffic-value">04%</strong></div></div>
           </div>
-          <div class="scene-frame"><div id="game-container" aria-label="Вид площади и здания правительства"></div><div class="scene-overlay top-left"><span class="record-dot"></span><span>КАМЕРА 01 · ЦЕНТР</span></div><div class="scene-overlay top-right" id="scene-condition">ДЕНЬ · НОРМАЛЬНАЯ ВИДИМОСТЬ</div><div class="scene-overlay bottom-left" id="scene-caption">Поток граждан распределён по площади</div><div class="scene-substats" id="scene-substats">ГОРОД: 5 000 ЖИТЕЛЕЙ · ОЦЕНКА ЯВКИ: 520 · В КАДРЕ: 90 АГЕНТОВ</div><div class="scene-overlay bottom-right"><span>КАДР/С</span> <strong id="fps-value">60</strong></div></div>
+          <div class="scene-frame"><div id="game-container" aria-label="Вид площади и здания правительства"></div><div class="scene-overlay top-left"><span class="record-dot"></span><span>КАМЕРА 01 · ПЛОЩАДЬ</span></div><div class="scene-overlay top-right" id="scene-condition">ДЕНЬ · НОРМАЛЬНАЯ ВИДИМОСТЬ</div><div class="scene-overlay bottom-left" id="scene-caption">Поток граждан распределён по площади</div><div class="scene-substats" id="scene-substats">ГОРОД: 5 000 ЖИТЕЛЕЙ · ОЦЕНКА ЯВКИ: 520 · В КАДРЕ: 90 АГЕНТОВ</div><div class="crowd-anger-strip" aria-live="polite"><div class="anger-label"><span>ЗЛОСТЬ ТОЛПЫ</span><strong id="crowd-anger-value">153 / 1000</strong></div><div class="anger-track"><i id="crowd-anger-bar" style="width:15.3%"></i></div><div class="casualty-live"><span>ТРАВМЫ <strong id="casualty-total-injured">0</strong></span><span>ПОГИБШИЕ <strong id="casualty-total-deaths">0</strong></span><span>ЛАГЕРЯ <strong id="camp-status-value">3 целы · 0 горят · 0 выгорели</strong></span></div></div><div class="scene-overlay bottom-right"><span>КАДР/С</span> <strong id="fps-value">60</strong></div></div>
           <div class="world-controls"><div class="scene-legend"><span><i class="legend-person civilian"></i>Граждане</span><span><i class="legend-person police"></i>Полиция</span><span><i class="legend-person service"></i>Службы</span><span><i class="legend-fire"></i>Очаг возгорания</span></div><div class="sim-controls"><button id="pause-btn" class="control-button"><span id="pause-icon">Ⅱ</span><span id="pause-label">Пауза</span></button><div class="speed-control" role="group" aria-label="Скорость симуляции"><button data-speed="1" class="speed-button active">1×</button><button data-speed="2" class="speed-button">2×</button><button data-speed="4" class="speed-button">4×</button></div></div></div>
         </section>
 
@@ -191,8 +173,8 @@
         </div>
         <div class="dashboard-grid crisis-grid">
           <section class="panel districts-panel">
-            <div class="panel-heading"><div><span class="section-index">09 / ГОРОДСКАЯ СЕТЬ</span><h2>Районы и блокировки</h2></div><span class="data-chip">5 СЕКТОРОВ</span></div>
-            <p class="panel-intro">Каждый сектор развивает собственную явку и загруженность; напряжённость может распространяться между районами.</p>
+            <div class="panel-heading"><div><span class="section-index">09 / ПЛОЩАДЬ РЕСПУБЛИКИ</span><h2>Единая локация · площадь</h2></div><span class="data-chip">1 ЛОКАЦИЯ</span></div>
+            <p class="panel-intro">Вся видимая симуляция происходит на площади Республики: толпа, здание правительства, палаточные лагеря, полиция, транспорт, пожары и медицинские вызовы.</p>
             <div id="district-list" class="district-list"></div>
           </section>
           <section class="panel radio-panel">
@@ -211,7 +193,7 @@
           </section>
         </div>
 
-        <footer class="app-footer"><span>КОНТУР // ВЕРСИЯ 3.0.0</span><span>МОДЕЛЬНАЯ СРЕДА · ВСЕ ДАННЫЕ ВЫМЫШЛЕНЫ</span><span id="last-save-label">СОХРАНЕНИЕ НЕ СОЗДАНО</span></footer>
+        <footer class="app-footer"><span>КОНТУР // ВЕРСИЯ 4.0.0</span><span>МОДЕЛЬНАЯ СРЕДА · ВСЕ ДАННЫЕ ВЫМЫШЛЕНЫ</span><span id="last-save-label">СОХРАНЕНИЕ НЕ СОЗДАНО</span></footer>
       </section>
     </main>
     <div class="negotiation-overlay" id="negotiation-overlay" hidden>
@@ -235,6 +217,7 @@
   <script src="js/world.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/crisis.js"></script>
+  <script src="js/v4.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

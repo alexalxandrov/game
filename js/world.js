@@ -690,16 +690,12 @@ class RepublicCityScene extends Phaser.Scene {
         if (medical) { a.tx = WORLD_U.clamp(medical.x + WORLD_U.random(-36,36), 40,1240); a.ty = WORLD_U.clamp(medical.y + WORLD_U.random(18,44), 300,532); a.timer = 1.4; }
       }
     }
-    // Officers hold a loose, moving line. More deployment means a deeper formation, not static icons.
-    const police = this.crowdPolice || [];
-    const cols = Math.min(10, Math.max(4, Math.ceil(Math.sqrt(police.length * 1.8))));
-    police.forEach((sprite, i) => {
-      const row = Math.floor(i/cols), col = i%cols;
-      const tx = 402 + col * (76/Math.max(1,cols-1)) + Math.sin(this.currentTime*.0008+i)*2.2;
-      const ty = 365 + row*22 + Math.sin(this.currentTime*.0012+i*.7)*1.5;
-      if (dt > 0) { sprite.x += (tx-sprite.x)*Math.min(1,dt*1.45); sprite.y += (ty-sprite.y)*Math.min(1,dt*1.45); }
-      sprite.setDepth(sprite.y+5);
-    });
+    // Police positioning is deliberately delegated to the autonomous crisis AI layer.
+    // Keeping a second static formation here causes two controllers to cancel each other's movement.
+    if (this._legacyStaticPoliceLayoutEnabled) {
+      const police = this.crowdPolice || [];
+      police.forEach(sprite => sprite.setDepth(sprite.y + 5));
+    }
   }
 
   _launchCrowdProjectile(agent) {
