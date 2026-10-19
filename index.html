@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10171b">
+  <meta name="description" content="Автономная политико-экономическая симуляция Республики Вереск">
+  <title>КОНТУР — Республика Вереск</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="seal" aria-hidden="true"><span>В</span><i></i></div>
+        <div class="brand-copy">
+          <div class="eyebrow">РЕСПУБЛИКА ВЕРЕСК · СИСТЕМА ГОСУПРАВЛЕНИЯ</div>
+          <div class="brand-title">КОНТУР <span>／</span> Кабинет министров</div>
+        </div>
+      </div>
+      <div class="top-status">
+        <div class="status-item"><span class="status-dot"></span><span id="run-state">СИМУЛЯЦИЯ АКТИВНА</span></div>
+        <div class="status-divider"></div>
+        <div class="clock-block"><span class="eyebrow">МЕСТНОЕ ВРЕМЯ</span><strong id="clock">08:00</strong></div>
+        <div class="clock-block"><span class="eyebrow">ДЕНЬ МАНДАТА</span><strong id="day-count">01 <small>/ 20</small></strong></div>
+        <div class="clock-block election-clock"><span class="eyebrow">ДО ВЫБОРОВ</span><strong id="election-countdown">19 дн.</strong></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-button" id="save-btn" title="Сохранить" aria-label="Сохранить"><span>↓</span></button>
+        <button class="icon-button" id="load-btn" title="Загрузить сохранение" aria-label="Загрузить сохранение"><span>↥</span></button>
+        <button class="icon-button warning-icon" id="reset-btn" title="Начать заново" aria-label="Начать заново"><span>↻</span></button>
+      </div>
+    </header>
+
+    <div class="command-strip">
+      <div class="strip-label"><span class="live-square"></span> ОПЕРАТИВНАЯ ОБСТАНОВКА</div>
+      <div class="ticker-window"><div class="ticker-track" id="ticker-track">Загрузка оперативной сводки…</div></div>
+      <div class="weather-chip"><span id="weather-icon">☼</span><span id="weather-label">Ясно</span><span id="temperature">+18°</span></div>
+    </div>
+
+    <main class="workspace">
+      <aside class="left-rail">
+        <section class="panel cabinet-panel">
+          <div class="panel-heading"><div><span class="section-index">01 / КАБИНЕТ</span><h2>Политический капитал</h2></div><span class="live-tag">В ЭФИРЕ</span></div>
+          <div class="approval-row">
+            <div class="approval-gauge" id="approval-gauge"><div class="gauge-inner"><strong id="approval-value">56</strong><span>ОДОБРЕНИЕ, %</span></div></div>
+            <div class="approval-detail">
+              <div class="metric-line"><span>Общественная устойчивость</span><strong id="stability-value">72%</strong></div>
+              <div class="meter"><span id="stability-bar" style="width:72%"></span></div>
+              <div class="metric-line"><span>Доверие к институтам</span><strong id="trust-value">61%</strong></div>
+              <div class="meter meter-muted"><span id="trust-bar" style="width:61%"></span></div>
+              <div class="metric-line"><span>Напряжённость</span><strong id="tension-value">38%</strong></div>
+              <div class="meter meter-alert"><span id="tension-bar" style="width:38%"></span></div>
+            </div>
+          </div>
+          <div class="cabinet-meta">
+            <div><span>Глава правительства</span><strong>Ирина Волкова</strong></div>
+            <div><span>Правящая коалиция</span><strong id="government-party">Гражданский союз</strong></div>
+          </div>
+          <div class="support-breakdown" id="support-breakdown"></div>
+        </section>
+
+        <section class="panel policy-panel">
+          <div class="panel-heading"><div><span class="section-index">02 / РЕШЕНИЯ</span><h2>Настройка курса</h2></div><span class="draft-tag" id="draft-status">ТЕКУЩИЙ КУРС</span></div>
+          <p class="panel-intro">Параметры вступают в силу после утверждения пакета. Последствия моделируются с задержкой.</p>
+          <div class="policy-control">
+            <div class="policy-label"><label for="policy-tax">Налог на прибыль</label><strong><span id="tax-value">22</span><small>%</small></strong></div>
+            <input type="range" id="policy-tax" min="10" max="40" value="22" data-policy="tax">
+            <div class="range-ends"><span>10% · стимул</span><span>40% · доход</span></div>
+          </div>
+          <div class="policy-control">
+            <div class="policy-label"><label for="policy-welfare">Социальная поддержка</label><strong><span id="welfare-value">54</span><small>/100</small></strong></div>
+            <input type="range" id="policy-welfare" min="0" max="100" value="54" data-policy="welfare">
+            <div class="range-ends"><span>Точечная</span><span>Широкая</span></div>
+          </div>
+          <div class="policy-control">
+            <div class="policy-label"><label for="policy-policing">Ресурс полиции</label><strong><span id="policing-value">45</span><small>/100</small></strong></div>
+            <input type="range" id="policy-policing" min="0" max="100" value="45" data-policy="policing">
+            <div class="range-ends"><span>Экономия</span><span>Усиление</span></div>
+          </div>
+          <div class="policy-control">
+            <div class="policy-label"><label for="policy-healthcare">Здравоохранение</label><strong><span id="healthcare-value">62</span><small>/100</small></strong></div>
+            <input type="range" id="policy-healthcare" min="0" max="100" value="62" data-policy="healthcare">
+            <div class="range-ends"><span>Базовое</span><span>Расширенное</span></div>
+          </div>
+          <div class="policy-control">
+            <div class="policy-label"><label for="policy-infrastructure">Инфраструктура</label><strong><span id="infrastructure-value">55</span><small>/100</small></strong></div>
+            <input type="range" id="policy-infrastructure" min="0" max="100" value="55" data-policy="infrastructure">
+            <div class="range-ends"><span>Поддержание</span><span>Модернизация</span></div>
+          </div>
+          <div class="policy-control">
+            <div class="policy-label"><label for="policy-environment">Экология</label><strong><span id="environment-value">48</span><small>/100</small></strong></div>
+            <input type="range" id="policy-environment" min="0" max="100" value="48" data-policy="environment">
+            <div class="range-ends"><span>Рост выпуска</span><span>Чистый воздух</span></div>
+          </div>
+          <div class="policy-control">
+            <div class="policy-label"><label for="policy-freedom">Свобода СМИ</label><strong><span id="freedom-value">68</span><small>/100</small></strong></div>
+            <input type="range" id="policy-freedom" min="0" max="100" value="68" data-policy="mediaFreedom">
+            <div class="range-ends"><span>Контроль</span><span>Плюрализм</span></div>
+          </div>
+          <div class="fiscal-preview"><div><span>Оценка баланса бюджета</span><strong id="budget-preview">−12 млн / день</strong></div><span class="preview-caption">ориентировочно</span></div>
+          <button class="primary-button" id="apply-policies"><span>Утвердить пакет</span><span class="button-arrow">↗</span></button>
+        </section>
+
+        <section class="panel response-panel">
+          <div class="panel-heading"><div><span class="section-index">03 / КРИЗИСНЫЙ ШТАБ</span><h2>Реакция правительства</h2></div></div>
+          <div class="response-grid">
+            <button class="response-option" data-action="negotiate"><span class="response-icon">⇄</span><span><strong>Переговоры</strong><small>Диалог с представителями</small></span></button>
+            <button class="response-option" data-action="police"><span class="response-icon">◈</span><span><strong>Подкрепление полиции</strong><small>Охрана и разделение сторон</small></span></button>
+            <button class="response-option" data-action="emergency"><span class="response-icon">⚑</span><span><strong>ЧП</strong><small>Особый правовой режим</small></span></button>
+            <button class="response-option military-option" data-action="military"><span class="response-icon">▥</span><span><strong>Военная помощь</strong><small>Высокая цена для доверия</small></span></button>
+            <button class="response-option full-response" data-action="ignore"><span class="response-icon">—</span><span><strong>Не вмешиваться</strong><small>Наблюдать и не эскалировать</small></span></button>
+          </div>
+          <div class="response-note" id="response-note">Нет решения, требующего немедленного вмешательства.</div>
+        </section>
+
+        <section class="panel mini-budget-panel">
+          <div class="panel-heading"><div><span class="section-index">04 / ФИНАНСЫ</span><h2>Государственная казна</h2></div><span class="currency-label">КР.</span></div>
+          <div class="treasury-total"><strong id="treasury-value">18,6</strong><span>млрд кр.</span><span id="treasury-change" class="delta-negative">−0,2%</span></div>
+          <div class="budget-bar"><span id="budget-spending" style="width:58%"></span><i id="budget-revenue" style="width:42%"></i></div>
+          <div class="budget-legend"><span><i class="legend-dot revenue-dot"></i>Доходы <b id="revenue-value">146 млн</b></span><span><i class="legend-dot spending-dot"></i>Расходы <b id="spending-value">158 млн</b></span></div>
+        </section>
+      </aside>
+
+      <section class="main-column">
+        <section class="panel world-panel">
+          <div class="world-heading">
+            <div class="world-title-wrap"><div class="scene-kicker"><span class="scene-live"></span> ГОРОДСКОЙ МОНИТОРИНГ <span class="scene-coordinates">54°42′ N / 25°17′ E · МОДЕЛЬНЫЙ ГОРОД</span></div><h1>Площадь Республики</h1><p id="world-subtitle">Гражданское собрание у здания правительства</p></div>
+            <div class="world-metrics"><div><span>ЛЮДИ НА ПЛОЩАДИ</span><strong id="crowd-value">86</strong></div><div><span>ИНЦИДЕНТЫ</span><strong id="incident-value">00</strong></div><div><span>СЛУЖБЫ В ПУТИ</span><strong id="vehicles-value">02</strong></div></div>
+          </div>
+          <div class="scene-frame"><div id="game-container" aria-label="Вид площади и здания правительства"></div><div class="scene-overlay top-left"><span class="record-dot"></span><span>КАМЕРА 01 · ЦЕНТР</span></div><div class="scene-overlay top-right" id="scene-condition">ДЕНЬ · НОРМАЛЬНАЯ ВИДИМОСТЬ</div><div class="scene-overlay bottom-left" id="scene-caption">Поток граждан распределён по площади</div><div class="scene-overlay bottom-right"><span>КАДР/С</span> <strong id="fps-value">60</strong></div></div>
+          <div class="world-controls"><div class="scene-legend"><span><i class="legend-person civilian"></i>Граждане</span><span><i class="legend-person police"></i>Полиция</span><span><i class="legend-person service"></i>Службы</span><span><i class="legend-fire"></i>Очаг возгорания</span></div><div class="sim-controls"><button id="pause-btn" class="control-button"><span id="pause-icon">Ⅱ</span><span id="pause-label">Пауза</span></button><div class="speed-control" role="group" aria-label="Скорость симуляции"><button data-speed="1" class="speed-button active">1×</button><button data-speed="2" class="speed-button">2×</button><button data-speed="4" class="speed-button">4×</button></div></div></div>
+        </section>
+
+        <div class="dashboard-grid">
+          <section class="panel news-panel">
+            <div class="panel-heading"><div><span class="section-index">05 / ИНФОРМАЦИОННАЯ ЛЕНТА</span><h2>Редакционная сводка</h2></div><span class="feed-count" id="news-count">06 ЗАПИСЕЙ</span></div>
+            <div class="news-filters" role="group" aria-label="Фильтр новостей"><button data-filter="all" class="filter-button active">Все</button><button data-filter="politics" class="filter-button">Политика</button><button data-filter="economy" class="filter-button">Экономика</button><button data-filter="city" class="filter-button">Город</button></div>
+            <div class="news-list" id="news-list" aria-live="polite"></div>
+          </section>
+          <section class="panel economy-panel">
+            <div class="panel-heading"><div><span class="section-index">06 / РЕАЛЬНЫЙ СЕКТОР</span><h2>Экономический пульс</h2></div><span class="data-chip">АВТОМОДЕЛЬ</span></div>
+            <div class="economy-kpis">
+              <div><span>Безработица</span><strong id="unemployment-value">7,4<small>%</small></strong><em id="unemployment-trend">−0,1 п.п.</em></div>
+              <div><span>Инфляция, г/г</span><strong id="inflation-value">4,2<small>%</small></strong><em id="inflation-trend">+0,1 п.п.</em></div>
+              <div><span>Рост ВВП</span><strong id="gdp-value">+1,8<small>%</small></strong><em id="gdp-trend">к прошлому кварталу</em></div>
+            </div>
+            <div class="chart-head"><span>ИНДЕКС ДЕЛОВОЙ АКТИВНОСТИ</span><span id="market-index">102,4</span></div>
+            <div class="chart-wrap"><canvas id="economy-chart" width="540" height="130" aria-label="График деловой активности"></canvas></div>
+            <div class="company-heading"><span>КЛЮЧЕВЫЕ ПРЕДПРИЯТИЯ</span><span>6 СЕКТОРОВ</span></div>
+            <div id="company-list" class="company-list"></div>
+            <div class="sector-footnote">Предприятия самостоятельно меняют выпуск, занятость, цены, налоговые выплаты и лоббистскую активность.</div>
+          </section>
+        </div>
+
+        <div class="dashboard-grid bottom-grid">
+          <section class="panel people-panel">
+            <div class="panel-heading"><div><span class="section-index">07 / ОБЩЕСТВЕННОЕ МНЕНИЕ</span><h2>Группы и повестка</h2></div></div>
+            <div id="factions-list" class="factions-list"></div>
+          </section>
+          <section class="panel incidents-panel">
+            <div class="panel-heading"><div><span class="section-index">08 / ОПЕРАТИВНЫЕ ДАННЫЕ</span><h2>Инциденты и службы</h2></div><span class="feed-count" id="incident-count-label">0 ОТКРЫТО</span></div>
+            <div id="incident-list" class="incident-list"></div>
+            <div class="service-status-row"><span><i class="service-dot police-dot"></i>Патрули</span><strong id="police-status">Дежурство</strong><span><i class="service-dot fire-dot"></i>Пожарные</span><strong id="fire-status">Готовы</strong><span><i class="service-dot medical-dot"></i>Медики</span><strong id="medical-status">Готовы</strong></div>
+          </section>
+        </div>
+        <footer class="app-footer"><span>КОНТУР // ВЕРСИЯ 1.0.0</span><span>МОДЕЛЬНАЯ СРЕДА · ВСЕ ДАННЫЕ ВЫМЫШЛЕНЫ</span><span id="last-save-label">СОХРАНЕНИЕ НЕ СОЗДАНО</span></footer>
+      </section>
+    </main>
+    <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/simulation.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
