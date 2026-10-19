@@ -35,12 +35,27 @@ class RepublicDashboardUI {
     document.querySelectorAll('[data-action]').forEach(button => {
       button.addEventListener('click', () => {
         const action = button.dataset.action;
+        if (action === 'negotiate') { this.openNegotiations(); return; }
         if (action === 'military' && !window.confirm('Привлечение военных повышает оперативные ресурсы, но существенно снижает общественное доверие. Применить эту меру?')) return;
         if (action === 'emergency' && !window.confirm('Ввести временный режим чрезвычайного положения на два модельных дня?')) return;
         const success = this.sim.enactAction(action);
         if (success) this.toast('Решение зарегистрировано', this.sim.state.lastAction, action === 'military' || action === 'emergency' ? 'warning' : 'success');
       });
     });
+    document.getElementById('open-negotiations').addEventListener('click', () => this.openNegotiations());
+    document.getElementById('negotiation-close').addEventListener('click', () => this.closeNegotiations());
+    document.getElementById('negotiation-options').addEventListener('click', event => {
+      const button = event.target.closest('[data-negotiation-choice]');
+      if (button) this.chooseNegotiationResponse(button.dataset.negotiationChoice);
+    });
+    document.getElementById('protest-agenda').addEventListener('click', event => {
+      const button = event.target.closest('[data-negotiate-group]');
+      if (button) this.openNegotiations(button.dataset.negotiateGroup);
+    });
+    document.getElementById('negotiation-overlay').addEventListener('click', event => {
+      if (event.target.id === 'negotiation-overlay') this.closeNegotiations();
+    });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') this.closeNegotiations(); });
     document.querySelectorAll('[data-speed]').forEach(button => {
       button.addEventListener('click', () => {
         this.speed = Number(button.dataset.speed);
@@ -75,6 +90,12 @@ class RepublicDashboardUI {
   set speed(value) { this._speed = value; }
 
   _onSimEvent(type, payload) {
+    if (type === 'negotiation' || type === 'negotiation-result') {
+      this.renderNegotiation();
+      if (type === 'negotiation-result' && !this.sim.state.activeNegotiation) {
+        this.toast('Переговоры завершены', 'Результат внесён в политическую модель и городскую сводку.', payload && ['reject','counter_end'].includes(payload.choice) ? 'warning' : 'success');
+      }
+    }
     if (type === 'toast') {
       this.toast('Оперативное сообщение', payload.message, payload.tone || 'info');
       return;
@@ -132,12 +153,15 @@ class RepublicDashboardUI {
     $('tension-bar').style.width = `${s.tension}%`;
     $('government-party').textContent = (this.sim.parties.find(p => p.id === s.governmentParty) || {}).name || 'Коалиция';
     const activeIncidents = s.incidents.filter(i => i.status !== 'resolved');
-    $('crowd-value').textContent = UI_U.fmtInt(window.worldScene ? window.worldScene.people.length : s.crowdTarget);
+    $('crowd-value').textContent = UI_U.fmtInt(s.crowdTarget || 0);
+    $('traffic-value').textContent = `${Math.round((s.roadBlockage || 0) * 100)}%`;
+    $('scene-substats').textContent = `ГОРОД: ${UI_U.fmtInt(s.cityPopulation || 5000)} ЖИТЕЛЕЙ · ОЦЕНКА ЯВКИ: ${UI_U.fmtInt(s.crowdTarget || 0)} · В КАДРЕ: ${UI_U.fmtInt(window.worldScene ? window.worldScene.people.length : 0)} АГЕНТОВ`;
+    $('protest-phase-label').textContent = (s.protestPhase || 'ГРАЖДАНСКОЕ СОБРАНИЕ').toLocaleUpperCase('ru-RU');
     $('incident-value').textContent = String(activeIncidents.length).padStart(2, '0');
     $('vehicles-value').textContent = String(window.worldScene ? window.worldScene.vehicles.length : 0).padStart(2, '0');
-    $('world-subtitle').textContent = s.tension > 78 ? 'Повышенная напряжённость · экстренные службы работают в усиленном режиме' : s.tension > 60 ? 'Многолюдное собрание · службы следят за проходами и безопасностью' : s.activeStrikes > 0 ? 'Гражданское собрание на фоне отраслевой трудовой акции' : 'Гражданское собрание у здания правительства';
+    $('world-subtitle').textContent = s.protestPhase || (s.tension > 68 ? 'Массовое собрание · экстренные службы работают в усиленном режиме' : 'Гражданское собрание у здания правительства');
     $('scene-condition').textContent = `${s.hour >= 7 && s.hour < 20 ? 'ДЕНЬ' : 'НОЧЬ'} · ${this._conditionLabel(s.weather.id).toUpperCase()}`;
-    $('scene-caption').textContent = s.tension > 75 ? 'Повышенная готовность · оценивайте последствия каждого решения' : s.tension > 55 ? 'Плотность толпы растёт · проходы для экстренных служб открыты' : 'Поток граждан распределён по площади';
+    $('scene-caption').textContent = s.roadBlockage > 0.62 ? 'Проезд перегружен · формируется очередь · экстренным службам нужен коридор' : s.tension > 76 ? 'Напряжённость высокая · в отдельных секторах возможны столкновения' : s.roadBlockage > 0.32 ? 'Толпа выходит к дороге · скорость городского движения снижена' : 'Камера передаёт непрерывное движение на площади и улице';
     $('weather-icon').textContent = s.weather.icon;
     $('weather-label').textContent = s.weather.label;
     $('temperature').textContent = `${s.weather.temperature > 0 ? '+' : ''}${Math.round(s.weather.temperature)}°`;
@@ -168,7 +192,7 @@ class RepublicDashboardUI {
     $('incident-count-label').textContent = `${activeIncidents.length} ОТКРЫТО`;
     const vehicles = window.worldScene ? window.worldScene.vehicles : [];
     $('police-status').textContent = vehicles.some(v => v.service === 'police' && v.phase !== 'return') ? 'В пути' : s.policePresence > 58 ? 'Усилено' : 'Дежурство';
-    $('fire-status').textContent = activeIncidents.some(i => i.type === 'fire') ? 'Выезд' : vehicles.some(v => v.service === 'fire') ? 'На вызове' : 'Готовы';
+    $('fire-status').textContent = activeIncidents.some(i => i.type === 'fire' || i.type === 'arson') ? 'Выезд' : vehicles.some(v => v.service === 'fire') ? 'На вызове' : 'Готовы';
     $('medical-status').textContent = activeIncidents.some(i => i.type === 'medical' || i.type === 'accident') ? 'Выезд' : vehicles.some(v => v.service === 'ambulance') ? 'На вызове' : 'Готовы';
     this.drawChart();
   }
@@ -211,6 +235,75 @@ class RepublicDashboardUI {
       const track = document.createElement('div'); const fill = document.createElement('i'); fill.style.width = `${f.value}%`; fill.style.background = f.color; track.append(fill);
       meter.append(value, track); row.append(copy, meter); factionContainer.append(row);
     });
+    const agenda = document.getElementById('protest-agenda');
+    if (agenda && typeof this.sim.getProtestGroups === 'function') {
+      agenda.innerHTML = '';
+      const groups = this.sim.getProtestGroups().filter(g => g.id !== 'supporters').sort((a,b) => (b.grievance * Math.sqrt(b.participants)) - (a.grievance * Math.sqrt(a.participants)));
+      groups.slice(0, 12).forEach(g => {
+        const row = document.createElement('div'); row.className = 'agenda-row';
+        const copy = document.createElement('div'); copy.className = 'agenda-copy';
+        const top = document.createElement('div'); top.className = 'agenda-topline';
+        const name = document.createElement('strong'); name.textContent = g.name;
+        const count = document.createElement('span'); count.textContent = `≈ ${UI_U.fmtInt(g.participants)}`;
+        top.append(name,count);
+        const demand = document.createElement('p'); demand.textContent = g.demand;
+        const stance = document.createElement('small'); stance.textContent = `${g.stance} · недовольство ${g.grievance}/100`;
+        copy.append(top,demand,stance);
+        const action = document.createElement('button'); action.type = 'button'; action.className = 'agenda-talk'; action.textContent = 'Обсудить'; action.dataset.negotiateGroup = g.id; action.setAttribute('aria-label', `Начать переговоры: ${g.name}`);
+        row.append(copy,action); agenda.append(row);
+      });
+    }
+  }
+
+  openNegotiations(groupId = null) {
+    this.sim.startNegotiations(groupId);
+    this.renderNegotiation();
+  }
+
+  closeNegotiations() {
+    const overlay = document.getElementById('negotiation-overlay');
+    if (overlay) overlay.hidden = true;
+  }
+
+  chooseNegotiationResponse(choice) {
+    const ok = this.sim.resolveNegotiation(choice);
+    if (!ok) return;
+    this.renderNegotiation();
+    this.renderAll(true);
+  }
+
+  renderNegotiation() {
+    const overlay = document.getElementById('negotiation-overlay');
+    const n = this.sim.state.activeNegotiation;
+    if (!n) { overlay.hidden = true; return; }
+    overlay.hidden = false;
+    document.getElementById('negotiation-title').textContent = `Переговоры: ${n.groupName}`;
+    document.getElementById('negotiation-speaker').textContent = `${n.representative} · делегация примерно ${UI_U.fmtInt(n.participants)} участников · раунд ${n.round}`;
+    document.getElementById('negotiation-demand').textContent = `ОСНОВНОЕ ТРЕБОВАНИЕ: ${n.demand}`;
+    const transcript = document.getElementById('negotiation-transcript'); transcript.innerHTML = '';
+    n.transcript.forEach(message => {
+      const item = document.createElement('div'); item.className = `transcript-message ${message.side === 'government' ? 'government-message' : 'citizen-message'}`;
+      const speaker = document.createElement('strong'); speaker.textContent = message.speaker;
+      const body = document.createElement('p'); body.textContent = message.text;
+      item.append(speaker,body); transcript.append(item);
+    });
+    const options = document.getElementById('negotiation-options'); options.innerHTML = '';
+    const choices = n.stage === 'opening' ? [
+      ['accept','Принять требование','Кабинет берёт на себя обязательство изменить политику.'],
+      ['counter','Предложить компромисс','Поэтапный план с публичным контролем исполнения.'],
+      ['hearing','Назначить открытые слушания','Протокол, альтернативы и повторная встреча без немедленных уступок.'],
+      ['reject','Отказать','Сохранить текущий курс; риск роста недовольства.']
+    ] : [
+      ['counter_accept','Подтвердить поэтапный план','Принять умеренный вариант и механизм отчётности.'],
+      ['counter_improve','Улучшить предложение','Предложить более весомые уступки ради соглашения.'],
+      ['counter_end','Прервать переговоры','Каналы связи останутся, но соглашения не будет.']
+    ];
+    choices.forEach(([value,label,desc]) => {
+      const button = document.createElement('button'); button.type='button'; button.className=`negotiation-choice choice-${value}`; button.dataset.negotiationChoice=value;
+      const title = document.createElement('strong'); title.textContent=label;
+      const detail = document.createElement('small'); detail.textContent=desc;
+      button.append(title,detail); options.append(button);
+    });
   }
 
   updateEconomy() {
@@ -248,7 +341,10 @@ class RepublicDashboardUI {
       const copy = document.createElement('div');
       const title = document.createElement('strong'); title.textContent = inc.label;
       const detail = document.createElement('small');
-      const serviceText = inc.serviceProgress && Object.keys(inc.serviceProgress).length ? 'службы работают на месте' : 'ожидает прибытия службы';
+      const serviceNames = { police: 'полиция', fire: 'пожарные', ambulance: 'медики' };
+      const serviceText = inc.serviceProgress && Object.keys(inc.serviceProgress).length
+        ? `на месте: ${Object.keys(inc.serviceProgress).map(key => serviceNames[key] || key).join(', ')}`
+        : 'ожидает прибытия службы';
       detail.textContent = `${inc.id} · ${inc.age} ч · ${serviceText}`;
       copy.append(title, detail);
       const severity = document.createElement('span'); severity.className = 'incident-severity'; severity.textContent = `${Math.round(inc.severity)}%`;
@@ -379,7 +475,7 @@ class RepublicDashboardUI {
 
   saveGame(automatic = false) {
     try {
-      localStorage.setItem('kontur-republic-save-v1', JSON.stringify(this.sim.snapshot()));
+      localStorage.setItem('kontur-republic-save-v2', JSON.stringify(this.sim.snapshot()));
       this._lastSaveAt = new Date();
       const label = document.getElementById('last-save-label');
       label.textContent = `СОХРАНЕНО ${this._lastSaveAt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
@@ -393,7 +489,7 @@ class RepublicDashboardUI {
 
   loadGame() {
     try {
-      const raw = localStorage.getItem('kontur-republic-save-v1');
+      const raw = localStorage.getItem('kontur-republic-save-v2');
       if (!raw) { this.toast('Сохранение не найдено', 'Сначала сохраните игру кнопкой со стрелкой вниз.', 'warning'); return false; }
       this.sim.loadSnapshot(JSON.parse(raw));
       this.draft = { ...this.sim.state.policies };

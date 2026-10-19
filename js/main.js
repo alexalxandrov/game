@@ -1,7 +1,7 @@
 'use strict';
 
 (function bootKontur() {
-  const SAVE_KEY = 'kontur-republic-save-v1';
+  const SAVE_KEY = 'kontur-republic-save-v2';
 
   function showFatal(message) {
     const parent = document.getElementById('game-container');
@@ -15,10 +15,7 @@
   }
 
   function start() {
-    if (!window.Phaser) {
-      showFatal('Не удалось загрузить Phaser 3. Проверьте подключение к интернету и перезагрузите страницу. Остальные панели доступны после загрузки библиотеки.');
-      return;
-    }
+    // Initialise the government/economy panels even if the external graphics CDN is unreachable.
     window.gameSimulation = new RepublicSimulation();
     try {
       const saved = localStorage.getItem(SAVE_KEY);
@@ -34,32 +31,36 @@
     }
 
     window.dashboardUI = new RepublicDashboardUI(window.gameSimulation);
-    const config = {
-      type: Phaser.AUTO,
-      parent: 'game-container',
-      width: 1280,
-      height: 640,
-      backgroundColor: '#7f8e89',
-      scene: [RepublicCityScene],
-      scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+    if (!window.Phaser) {
+      showFatal('Не удалось загрузить Phaser 3. Проверьте подключение к интернету. Политическая и экономическая модель остаётся доступной, но живой экран площади требует графической библиотеки.');
+    } else {
+      const config = {
+        type: Phaser.AUTO,
+        parent: 'game-container',
         width: 1280,
         height: 640,
-        expandParent: false
-      },
-      render: {
-        antialias: true,
-        pixelArt: false,
-        roundPixels: true,
-        transparent: false,
-        powerPreference: 'high-performance'
-      },
-      fps: { target: 60, forceSetTimeOut: false },
-      input: { activePointers: 2 },
-      banner: false
-    };
-    window.konturGame = new Phaser.Game(config);
+        backgroundColor: '#7f8e89',
+        scene: [RepublicCityScene],
+        scale: {
+          mode: Phaser.Scale.FIT,
+          autoCenter: Phaser.Scale.CENTER_BOTH,
+          width: 1280,
+          height: 640,
+          expandParent: false
+        },
+        render: {
+          antialias: true,
+          pixelArt: false,
+          roundPixels: true,
+          transparent: false,
+          powerPreference: 'high-performance'
+        },
+        fps: { target: 60, forceSetTimeOut: false },
+        input: { activePointers: 2 },
+        banner: false
+      };
+      window.konturGame = new Phaser.Game(config);
+    }
 
     window.setInterval(() => {
       if (window.gameSimulation && !window.gameSimulation.state.paused) {

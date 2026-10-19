@@ -261,6 +261,81 @@ input[type="range"]::-moz-range-thumb { width: 8px; height: 8px; border: 2px sol
 .toast-title { display: block; color: #8fb4a5; font: 700 8px var(--mono); letter-spacing: .1em; margin-bottom: 3px; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+
+/* Version 2.0: live street scene, protest agenda and interactive talks */
+.scene-substats { position:absolute; z-index:9; left:10px; top:47px; max-width:calc(100% - 20px); color:#c9d4ca; background:rgba(9,17,19,.62); border:1px solid rgba(141,161,154,.18); padding:4px 6px; font:7px/1.4 var(--mono); letter-spacing:.035em; pointer-events:none; }
+.world-metrics { gap:clamp(7px,1vw,15px); }
+.world-metrics div { min-width:0; }
+.world-metrics span { font-size:6px; letter-spacing:.055em; }
+.world-metrics strong { font-size:clamp(14px,1.25vw,19px); }
+#traffic-value { color:#d3b77e; }
+.protest-agenda-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:12px 0 6px; padding-top:10px; border-top:1px solid var(--border-soft); color:#91a5a0; font:700 8px var(--mono); letter-spacing:.1em; }
+.protest-agenda-heading span:last-child { max-width:56%; text-align:right; color:#c5a46a; font-size:7px; }
+.protest-agenda { display:flex; flex-direction:column; gap:6px; max-height:420px; overflow-y:auto; padding-right:4px; scrollbar-color:#445a59 #172327; scrollbar-width:thin; }
+.agenda-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid rgba(47,63,65,.48); }
+.agenda-copy { min-width:0; }
+.agenda-topline { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.agenda-topline strong { color:#d7e0d8; font-size:10px; font-weight:650; }
+.agenda-topline span { color:#c8ad7b; font:9px var(--mono); white-space:nowrap; }
+.agenda-copy p { margin:3px 0 2px; color:#aab8b0; font-size:9px; line-height:1.38; }
+.agenda-copy small { color:#748984; font-size:8px; }
+.agenda-talk { border:1px solid #3b5551; background:#1b302f; color:#a9cfc2; padding:5px 7px; border-radius:3px; font-size:9px; cursor:pointer; }
+.agenda-talk:hover { border-color:#6d9e91; background:#25403d; color:#e0eee5; }
+.secondary-button { width:100%; display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding:9px 11px; color:#d4dfd6; background:#1b2a2d; border:1px solid #3c5050; border-radius:4px; font-size:10px; cursor:pointer; }
+.secondary-button:hover { background:#253b3d; border-color:#5c827a; }
+.secondary-button span { color:#c5a46a; font-size:15px; }
+.negotiation-overlay { position:fixed; z-index:1000; inset:0; background:rgba(3,8,9,.76); backdrop-filter:blur(5px); display:grid; place-items:center; padding:18px; }
+.negotiation-overlay[hidden] { display:none; }
+.negotiation-dialog { width:min(680px,100%); max-height:min(86vh,900px); overflow:auto; background:linear-gradient(145deg,#182529,#111a1e); border:1px solid #43585a; border-radius:8px; box-shadow:0 25px 100px rgba(0,0,0,.55); padding:22px; }
+.negotiation-kicker { display:flex; align-items:center; gap:8px; color:#8da5a0; font:700 8px var(--mono); letter-spacing:.15em; }
+.negotiation-kicker .record-dot { flex:none; }
+#negotiation-close { margin-left:auto; width:29px; height:29px; border:1px solid #34484b; background:#1c2a2e; border-radius:4px; color:#c6d2cb; font-size:20px; line-height:1; cursor:pointer; }
+.negotiation-dialog h2 { margin:13px 0 6px; color:#e5e9e0; font-size:19px; letter-spacing:-.03em; }
+.negotiation-speaker { margin:0 0 12px; color:#8ea19e; font-size:10px; }
+.negotiation-demand { margin:0 0 12px; border-left:2px solid #c6a46b; background:#202b2c; padding:10px 12px; color:#e0d2b0; font-size:11px; line-height:1.5; }
+.negotiation-transcript { display:flex; flex-direction:column; gap:8px; max-height:29vh; overflow:auto; padding-right:3px; }
+.transcript-message { padding:9px 11px; border:1px solid #293b3f; background:#172327; border-radius:4px; }
+.transcript-message strong { display:block; margin-bottom:3px; color:#9ec4b6; font-size:9px; }
+.transcript-message p { margin:0; color:#bdc9c2; font-size:10px; line-height:1.55; }
+.government-message { background:#1a2d2e; border-color:#34514c; }
+.government-message strong { color:#d7b879; }
+.negotiation-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:13px; }
+.negotiation-choice { text-align:left; min-height:65px; padding:10px 11px; border:1px solid #35484b; border-radius:4px; background:#1b292d; cursor:pointer; }
+.negotiation-choice:hover { border-color:#76a598; background:#223837; }
+.negotiation-choice strong { display:block; color:#d7e1d8; font-size:10px; }
+.negotiation-choice small { display:block; margin-top:4px; color:#8fa19b; font-size:9px; line-height:1.4; }
+.choice-reject,.choice-counter_end { border-color:#60413e; }
+.choice-reject:hover,.choice-counter_end:hover { border-color:#b7776b; background:#342725; }
+.negotiation-footnote { margin-top:13px; color:#6e8480; font-size:8px; line-height:1.5; }
+
+/* Compact 13-inch laptop layout: preserve the scene without making controls microscopic. */
+@media (min-width:1041px) and (max-width:1440px) {
+  .workspace { grid-template-columns:clamp(276px,23.5vw,315px) minmax(0,1fr); gap:9px; padding:9px 10px; }
+  .cabinet-panel,.policy-panel,.response-panel,.mini-budget-panel { padding:12px; }
+  .world-heading { padding:12px 12px 9px; gap:10px; }
+  .world-heading h1 { font-size:18px; }
+  .world-metrics { gap:8px; }
+  .world-metrics span { font-size:5.5px; letter-spacing:.025em; }
+  .world-metrics strong { font-size:14px; }
+  .scene-frame { max-height:none; margin:0 5px; }
+  .world-controls { padding:8px 10px; }
+  .scene-legend { gap:8px; }
+  .scene-legend span { font-size:8px; }
+  .dashboard-grid { gap:8px; }
+  .news-panel,.economy-panel,.people-panel,.incidents-panel { padding:11px; }
+  .panel-heading h2 { font-size:12px; }
+  .negotiation-dialog { width:min(620px,100%); padding:18px; }
+}
+@media (max-height:850px) and (min-width:1041px) {
+  .topbar { min-height:65px; padding-top:9px; padding-bottom:9px; }
+  .workspace { padding-top:7px; }
+  .scene-frame { aspect-ratio:2.16 / 1; }
+  .cabinet-panel,.policy-panel,.response-panel,.mini-budget-panel { padding:10px 12px; }
+  .panel-heading { margin-bottom:9px; }
+  .policy-control { padding-top:6px; padding-bottom:5px; }
+  .news-list { max-height:360px; }
+}
+
 @media (min-width: 1600px) {
   .workspace { grid-template-columns: 365px minmax(0, 1fr); padding: 16px 22px; gap: 15px; }
   .left-rail, .main-column { gap: 13px; }
@@ -304,7 +379,11 @@ input[type="range"]::-moz-range-thumb { width: 8px; height: 8px; border: 2px sol
   .policy-panel { grid-row: auto; }
   .world-heading { padding: 12px; flex-direction: column; align-items: flex-start; }
   .world-heading h1 { font-size: 19px; }
-  .world-metrics { width: 100%; justify-content: space-between; border-top: 1px solid var(--border-soft); padding-top: 8px; }
+  .world-metrics { width: 100%; justify-content: space-between; flex-wrap:wrap; border-top: 1px solid var(--border-soft); padding-top: 8px; }
+  .world-metrics div { flex:1 1 38%; }
+  .world-metrics span { font-size:6px; }
+  .world-metrics strong { font-size:16px; }
+  .scene-substats { top:44px; left:6px; font-size:6px; max-width:calc(100% - 12px); }
   .scene-coordinates { display: none; }
   .scene-frame { margin: 0 5px; aspect-ratio: 1.35 / 1; }
   .world-controls { flex-direction: column; align-items: flex-start; padding: 10px; }
@@ -314,9 +393,54 @@ input[type="range"]::-moz-range-thumb { width: 8px; height: 8px; border: 2px sol
   .app-footer { flex-wrap: wrap; font-size: 7px; }
   .scene-overlay.top-right { display: none; }
   .scene-overlay.bottom-left { max-width: 68%; font-size: 7px; }
+  .negotiation-dialog { padding:14px; }
+  .negotiation-options { grid-template-columns:1fr; }
+  .negotiation-dialog h2 { font-size:16px; }
   .service-status-row { grid-template-columns: auto 1fr auto 1fr; }
   .service-status-row span:nth-of-type(3), .service-status-row strong:nth-of-type(3) { display: none; }
 }
+
+/* 13-inch laptops: keep the camera prominent and reduce side-panel overhead. */
+@media (min-width: 1041px) and (max-width: 1366px) {
+  .topbar { min-height: 66px; padding: 9px 13px; gap: 10px; }
+  .brand-lockup { min-width: 245px; gap: 9px; }
+  .seal { width: 36px; height: 36px; font-size: 18px; }
+  .brand-title { font-size: 16px; }
+  .top-status { gap: 11px; }
+  .status-item { font-size: 8px; }
+  .clock-block { min-width: 54px; }
+  .clock-block strong { font-size: 14px; }
+  .command-strip { min-height: 31px; padding: 0 13px; gap: 10px; }
+  .ticker-window { height: 28px; }
+  .workspace { grid-template-columns: 286px minmax(0,1fr); gap: 9px; padding: 9px 10px 8px; }
+  .left-rail, .main-column { gap: 8px; }
+  .cabinet-panel, .policy-panel, .response-panel, .mini-budget-panel { padding: 10px 11px; }
+  .panel-heading { margin-bottom: 9px; }
+  .approval-row { grid-template-columns: 82px minmax(0,1fr); gap: 10px; }
+  .approval-gauge { width: 82px; height: 82px; }
+  .approval-gauge::before { width: 69px; height: 69px; }
+  .gauge-inner strong { font-size: 25px; }
+  .cabinet-meta { padding: 8px 0 6px; margin-top: 7px; }
+  .support-breakdown { padding-top: 7px; gap: 4px; }
+  .policy-control { padding-top: 5px; padding-bottom: 4px; }
+  .policy-label label { font-size: 10px; }
+  .response-option { min-height: 49px; padding: 6px; }
+  .world-heading { padding: 10px 11px 8px; }
+  .world-heading h1 { font-size: 17px; }
+  .world-metrics { gap: 7px; }
+  .world-metrics strong { font-size: 13px; }
+  .scene-frame { aspect-ratio: 2.16 / 1; }
+  .world-controls { padding: 7px 9px; }
+  .dashboard-grid { gap: 8px; }
+  .news-panel, .economy-panel, .people-panel, .incidents-panel { padding: 10px; }
+}
+@media (min-width: 1041px) and (max-width: 1366px) and (max-height: 820px) {
+  .scene-frame { aspect-ratio: 2.25 / 1; }
+  .news-list { max-height: 270px; }
+  .policy-control { padding-top: 4px; padding-bottom: 3px; }
+  .range-ends { font-size: 7px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

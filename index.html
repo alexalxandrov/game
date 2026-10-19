@@ -126,10 +126,10 @@
       <section class="main-column">
         <section class="panel world-panel">
           <div class="world-heading">
-            <div class="world-title-wrap"><div class="scene-kicker"><span class="scene-live"></span> ГОРОДСКОЙ МОНИТОРИНГ <span class="scene-coordinates">54°42′ N / 25°17′ E · МОДЕЛЬНЫЙ ГОРОД</span></div><h1>Площадь Республики</h1><p id="world-subtitle">Гражданское собрание у здания правительства</p></div>
-            <div class="world-metrics"><div><span>ЛЮДИ НА ПЛОЩАДИ</span><strong id="crowd-value">86</strong></div><div><span>ИНЦИДЕНТЫ</span><strong id="incident-value">00</strong></div><div><span>СЛУЖБЫ В ПУТИ</span><strong id="vehicles-value">02</strong></div></div>
+            <div class="world-title-wrap"><div class="scene-kicker"><span class="scene-live"></span> ГОРОДСКОЙ МОНИТОРИНГ <span class="scene-coordinates">ЦЕНТР ВЕРЕСКА · МОДЕЛЬНАЯ КАМЕРА</span></div><h1>Площадь Республики</h1><p id="world-subtitle">Гражданское собрание у здания правительства</p></div>
+            <div class="world-metrics"><div><span>НА ПЛОЩАДИ · ОЦЕНКА</span><strong id="crowd-value">520</strong></div><div><span>ИНЦИДЕНТЫ</span><strong id="incident-value">00</strong></div><div><span>СПЕЦТРАНСПОРТ</span><strong id="vehicles-value">00</strong></div><div><span>ЗАГРУЗКА ДОРОГ</span><strong id="traffic-value">04%</strong></div></div>
           </div>
-          <div class="scene-frame"><div id="game-container" aria-label="Вид площади и здания правительства"></div><div class="scene-overlay top-left"><span class="record-dot"></span><span>КАМЕРА 01 · ЦЕНТР</span></div><div class="scene-overlay top-right" id="scene-condition">ДЕНЬ · НОРМАЛЬНАЯ ВИДИМОСТЬ</div><div class="scene-overlay bottom-left" id="scene-caption">Поток граждан распределён по площади</div><div class="scene-overlay bottom-right"><span>КАДР/С</span> <strong id="fps-value">60</strong></div></div>
+          <div class="scene-frame"><div id="game-container" aria-label="Вид площади и здания правительства"></div><div class="scene-overlay top-left"><span class="record-dot"></span><span>КАМЕРА 01 · ЦЕНТР</span></div><div class="scene-overlay top-right" id="scene-condition">ДЕНЬ · НОРМАЛЬНАЯ ВИДИМОСТЬ</div><div class="scene-overlay bottom-left" id="scene-caption">Поток граждан распределён по площади</div><div class="scene-substats" id="scene-substats">ГОРОД: 5 000 ЖИТЕЛЕЙ · ОЦЕНКА ЯВКИ: 520 · В КАДРЕ: 90 АГЕНТОВ</div><div class="scene-overlay bottom-right"><span>КАДР/С</span> <strong id="fps-value">60</strong></div></div>
           <div class="world-controls"><div class="scene-legend"><span><i class="legend-person civilian"></i>Граждане</span><span><i class="legend-person police"></i>Полиция</span><span><i class="legend-person service"></i>Службы</span><span><i class="legend-fire"></i>Очаг возгорания</span></div><div class="sim-controls"><button id="pause-btn" class="control-button"><span id="pause-icon">Ⅱ</span><span id="pause-label">Пауза</span></button><div class="speed-control" role="group" aria-label="Скорость симуляции"><button data-speed="1" class="speed-button active">1×</button><button data-speed="2" class="speed-button">2×</button><button data-speed="4" class="speed-button">4×</button></div></div></div>
         </section>
 
@@ -157,7 +157,7 @@
         <div class="dashboard-grid bottom-grid">
           <section class="panel people-panel">
             <div class="panel-heading"><div><span class="section-index">07 / ОБЩЕСТВЕННОЕ МНЕНИЕ</span><h2>Группы и повестка</h2></div></div>
-            <div id="factions-list" class="factions-list"></div>
+            <div id="factions-list" class="factions-list"></div><div class="protest-agenda-heading"><span>АКТУАЛЬНЫЕ ТРЕБОВАНИЯ</span><span id="protest-phase-label">ГРАЖДАНСКОЕ СОБРАНИЕ</span></div><div id="protest-agenda" class="protest-agenda"></div><button type="button" id="open-negotiations" class="secondary-button">Открыть переговоры <span>↗</span></button>
           </section>
           <section class="panel incidents-panel">
             <div class="panel-heading"><div><span class="section-index">08 / ОПЕРАТИВНЫЕ ДАННЫЕ</span><h2>Инциденты и службы</h2></div><span class="feed-count" id="incident-count-label">0 ОТКРЫТО</span></div>
@@ -165,9 +165,20 @@
             <div class="service-status-row"><span><i class="service-dot police-dot"></i>Патрули</span><strong id="police-status">Дежурство</strong><span><i class="service-dot fire-dot"></i>Пожарные</span><strong id="fire-status">Готовы</strong><span><i class="service-dot medical-dot"></i>Медики</span><strong id="medical-status">Готовы</strong></div>
           </section>
         </div>
-        <footer class="app-footer"><span>КОНТУР // ВЕРСИЯ 1.0.0</span><span>МОДЕЛЬНАЯ СРЕДА · ВСЕ ДАННЫЕ ВЫМЫШЛЕНЫ</span><span id="last-save-label">СОХРАНЕНИЕ НЕ СОЗДАНО</span></footer>
+        <footer class="app-footer"><span>КОНТУР // ВЕРСИЯ 2.1.0</span><span>МОДЕЛЬНАЯ СРЕДА · ВСЕ ДАННЫЕ ВЫМЫШЛЕНЫ</span><span id="last-save-label">СОХРАНЕНИЕ НЕ СОЗДАНО</span></footer>
       </section>
     </main>
+    <div class="negotiation-overlay" id="negotiation-overlay" hidden>
+      <section class="negotiation-dialog" role="dialog" aria-modal="true" aria-labelledby="negotiation-title">
+        <div class="negotiation-kicker"><span class="record-dot"></span> ПУБЛИЧНЫЕ КОНСУЛЬТАЦИИ <button type="button" id="negotiation-close" aria-label="Закрыть переговоры">×</button></div>
+        <h2 id="negotiation-title">Переговоры с представителями граждан</h2>
+        <p id="negotiation-speaker" class="negotiation-speaker"></p>
+        <div id="negotiation-demand" class="negotiation-demand"></div>
+        <div id="negotiation-transcript" class="negotiation-transcript" aria-live="polite"></div>
+        <div id="negotiation-options" class="negotiation-options"></div>
+        <div class="negotiation-footnote">Решения влияют на доверие, напряжённость, явку на площадь и параметры политики. Переговоры могут завершиться соглашением или остаться без результата.</div>
+      </section>
+    </div>
     <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
   </div>
 
