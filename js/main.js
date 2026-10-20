@@ -1,8 +1,9 @@
 'use strict';
 
 (function bootKontur() {
-  const SAVE_KEY = 'kontur-republic-save-v5';
-  const LEGACY_SAVE_KEY = 'kontur-republic-save-v4';
+  const SAVE_KEY = 'kontur-republic-save-v6';
+  const LEGACY_SAVE_KEY = 'kontur-republic-save-v5';
+  const LEGACY_SAVE_KEY_V4 = 'kontur-republic-save-v4';
   const LEGACY_SAVE_KEY_V3 = 'kontur-republic-save-v3';
   const LEGACY_SAVE_KEY_V2 = 'kontur-republic-save-v2';
 
@@ -25,6 +26,7 @@
       let migrated = false;
       if (!saved) {
         saved = localStorage.getItem(LEGACY_SAVE_KEY);
+        if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V4);
         if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V3);
         if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V2);
         migrated = Boolean(saved);
@@ -36,7 +38,7 @@
         if (supported) {
           window.gameSimulation.loadSnapshot(parsed);
           document.getElementById('last-save-label').textContent = migrated
-            ? 'СТАРОЕ СОХРАНЕНИЕ АДАПТИРОВАНО К v5'
+            ? 'СТАРОЕ СОХРАНЕНИЕ АДАПТИРОВАНО К v6'
             : 'АВТОВОССТАНОВЛЕНО ИЗ БРАУЗЕРА';
         }
       }

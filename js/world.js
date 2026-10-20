@@ -820,8 +820,8 @@ class RepublicCityScene extends Phaser.Scene {
       if (inc.status === 'resolved') continue;
       if (inc.type === 'fire' || inc.type === 'arson') {
         const pulse = 0.72 + Math.sin(time * 0.012 + inc.x) * 0.18;
-        this.fx.fillStyle(0xf08b36, 0.12); this.fx.fillCircle(inc.x, inc.y - 5, 30 + pulse * 8);
-        this.fx.fillStyle(0xd45e30, 0.26); this.fx.fillCircle(inc.x, inc.y - 8, 19 + pulse * 4);
+        this.fx.fillStyle(0x3a3027, 0.11); this.fx.fillEllipse(inc.x, inc.y + 1, 57 + pulse * 10, 17);
+        this.fx.fillStyle(0xe36a32, 0.12); this.fx.fillEllipse(inc.x, inc.y - 5, 35 + pulse * 5, 13);
         for (let j = 0; j < 5; j++) {
           const wobble = Math.sin(time * 0.009 + j * 2.1 + inc.id.length) * 6;
           const rise = (time * 0.018 + j * 9) % 21;
@@ -830,8 +830,9 @@ class RepublicCityScene extends Phaser.Scene {
         }
         this.fx.fillStyle(0x5b6460, 0.17); this.fx.fillCircle(inc.x - 6, inc.y - 34 - (time % 150) * 0.06, 9);
       } else if (inc.type === 'clash' || inc.type === 'riot') {
-        this.fx.lineStyle(1.5, 0xd56a5d, 0.6); this.fx.strokeCircle(inc.x, inc.y, 16 + Math.sin(time * 0.006) * 3);
-        this.fx.fillStyle(0xd56a5d, 0.17); this.fx.fillCircle(inc.x, inc.y, 18);
+        const flicker = 0.62 + Math.sin(time * 0.018 + inc.x) * 0.18;
+        this.fx.lineStyle(2, 0xd56a5d, flicker); this.fx.beginPath(); this.fx.moveTo(inc.x-7,inc.y-4); this.fx.lineTo(inc.x-2,inc.y+2); this.fx.moveTo(inc.x+6,inc.y-5); this.fx.lineTo(inc.x+1,inc.y+2); this.fx.strokePath();
+        this.fx.fillStyle(0xd56a5d, 0.22); this.fx.fillEllipse(inc.x, inc.y+3, 13, 5);
       } else if (inc.type === 'blockade') {
         const pulse = 0.40 + Math.sin(time*0.009)*0.16;
         this.fx.fillStyle(0xc9564b, pulse); this.fx.fillRect(inc.x-54, inc.y-4, 108, 8);

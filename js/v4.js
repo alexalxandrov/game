@@ -589,7 +589,8 @@
           const p=.6+Math.sin(time*.028+camp.x)*.24;const r=camp.radius||30;
           this.fx.fillStyle(0x282e2d,.18);this.fx.fillEllipse(camp.x,camp.y-23,r*2.2,r*1.35);
           for(let j=0;j<5;j++){const dx=Math.sin(time*.003+j*1.8+camp.x)*r*.45;const rise=(time*.013+j*13)%(r+34);this.fx.fillStyle(j%2?0x525a56:0x353b39,Math.max(.02,.15-rise/(r+34)*.12));this.fx.fillCircle(camp.x+dx,camp.y-rise-14,5+rise*.22);}
-          this.fx.fillStyle(0xef7435,.14+p*.08);this.fx.fillCircle(camp.x,camp.y-5,r*.85);
+          this.fx.fillStyle(0x352b26,.18);this.fx.fillEllipse(camp.x,camp.y,r*1.6,r*.38);
+          this.fx.fillStyle(0xef7435,.10+p*.05);this.fx.fillEllipse(camp.x,camp.y-5,r*1.9,r*.62);
         } else if(camp.condition==='Выжжен'){
           this.fx.fillStyle(0x2c302f,.32);this.fx.fillEllipse(camp.x,camp.y,camp.radius*1.2,camp.radius*.5);
         }

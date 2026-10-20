@@ -655,8 +655,8 @@
       const smokeR=Math.min(150,Number(z.smokeRadius||z.radius*2.6||42));
       drawPlume(z.x,z.y,smokeR,intensity,z.windDrift||8,index+String(z.id||'').length);
       const flicker=.78+Math.sin(time*.035+z.x*.3+index)*.16+Math.sin(time*.019+z.y)*.10;
-      flames.fillStyle(0xec4f25,.13*intensity).fillCircle(z.x,z.y-9,r*2.5);
-      flames.fillStyle(0xff8b30,.19*intensity).fillEllipse(z.x,z.y-9,r*2.2,r*2.4);
+      flames.fillStyle(0x332b25,.12*intensity).fillEllipse(z.x,z.y+1,r*4.3,r*.64);
+      flames.fillStyle(0xff8b30,.15*intensity).fillEllipse(z.x,z.y-8,r*2.9,r*1.05);
       const tongues=Math.min(15,Math.max(6,Math.round(6+area/18)));
       for(let k=0;k<tongues;k++) {
         const off=((k/(tongues-1))-.5)*r*2;
@@ -703,13 +703,13 @@
       const radius=Number(z.radius||80), drift=(s.windDirection||1)*Math.min(32,Number(z.intensity||1)*10);
       if (z.kind==='water') {
         flames.lineStyle(3,0x93c3d3,.22).beginPath().moveTo(640,592).lineTo(z.x,z.y).strokePath();
-        flames.fillStyle(0x80b6cf,.09).fillCircle(z.x,z.y,radius*.9);
+        flames.fillStyle(0x80b6cf,.09).fillEllipse(z.x,z.y,radius*1.65,radius*.68);
       } else if (z.kind==='gas' || String(z.id||'').startsWith('GAS')) {
         drawPlume(z.x+drift,z.y,Math.min(110,radius*.9),.5,drift,String(z.id||'').length,0x9ca98d);
-        smoke.fillStyle(0x9aa992,.075).fillCircle(z.x+drift,z.y,radius*.75);
+        smoke.fillStyle(0x9aa992,.075).fillEllipse(z.x+drift,z.y,radius*1.55,radius*.72);
       } else if (z.kind==='flash') {
         const pulse=.3+.7*Math.max(0,Math.sin(time*.04));
-        flames.fillStyle(0xf4e8bc,.19*pulse).fillCircle(z.x,z.y,radius*1.1);
+        flames.fillStyle(0xf4e8bc,.19*pulse).fillEllipse(z.x,z.y,radius*1.75,radius*.52);
       }
     }
     // Flames on people are short-lived but persistent enough to show the impact and panic response.

@@ -1514,21 +1514,21 @@
     (s.fireZones||[]).forEach(z=>{
       const pulse=.65+Math.sin(time*.013+(z.x||0))*.16;
       const radius=Math.max(12,z.radius||18), smoke=Math.max(radius,z.smokeRadius||32);
-      g.fillStyle(0x292f31,0.045);g.fillCircle((z.x||0)+(z.windDrift||0), (z.y||0)-smoke*.22,smoke*1.18);
+      g.fillStyle(0x292f31,0.045);g.fillEllipse((z.x||0)+(z.windDrift||0), (z.y||0)-smoke*.22,smoke*2.15,smoke*1.05);
       for(let k=0;k<4;k++) {
         const drift=Math.sin(time*.0015+k*2.1+(z.x||0))*(smoke*.24);
         const up=(time*.012+k*15)%(smoke+28);
         g.fillStyle(0x454c4b,Math.max(.02,.12-up/(smoke+28)*.08));g.fillCircle((z.x||0)+(z.windDrift||0)+drift,(z.y||0)-up-14,8+up*.20);
       }
-      g.fillStyle(0xef8039,.08+pulse*.05);g.fillCircle(z.x,z.y,radius*1.65);
-      g.fillStyle(0xdf6334,.17+pulse*.09);g.fillCircle(z.x,z.y,radius*.75);
+      g.fillStyle(0xef8039,.075+pulse*.045);g.fillEllipse(z.x,z.y+1,radius*3.25,radius*.78);
+      g.fillStyle(0xdf6334,.14+pulse*.07);g.fillEllipse(z.x,z.y,radius*1.7,radius*.46);
       for(let i=0;i<5;i++){const fx=z.x+Math.sin(time*.009+i*2.5)*radius*.25;const fy=z.y-(time*.014+i*8)%(radius+26);g.fillStyle(i%2?0xffbc65:0xe35e32,.55);g.fillTriangle(fx-4,fy,fx+4,fy,fx,fy-10);}
     });
     (s.gasZones||[]).forEach(z=>{
       const radius=z.radius||90;const a=clamp((z.life||0)/3,.02,.22);
       const color=z.kind==='water'?0x8ebbc2:z.kind==='flash'?0xe7cf9c:0xa4b5a4;
-      g.fillStyle(color,a);g.fillCircle(z.x,z.y,radius*(.85+Math.sin(time*.006)*.05));
-      g.lineStyle(1,color,a*1.8);g.strokeCircle(z.x,z.y,radius);
+      g.fillStyle(color,a*.62);g.fillEllipse(z.x+(z.drift||0),z.y-3,radius*1.85,radius*.92);
+      g.fillStyle(color,a*.28);g.fillEllipse(z.x-radius*.22,z.y+2,radius*1.42,radius*.66);
     });
     (s.barricades||[]).forEach(b=>{
       if(b.status==='cleared'||b.status==='burned')return;
@@ -1540,7 +1540,7 @@
     // Damaged street assets remain visible even after the immediate fire effect fades.
     (s.assets||[]).filter(a=>a.condition==='Повреждён'||a.condition==='Сильно повреждён'||a.condition==='Разрушен'||a.condition==='Горит').forEach(a=>{
       const r=Math.max(7,(a.radius||18)*.52);const col=a.condition==='Горит'?0xe2753a:a.condition==='Разрушен'?0x252a29:0x9f5549;
-      g.fillStyle(col,a.condition==='Горит'?.2:.13);g.fillCircle(a.x,a.y,r+5);g.lineStyle(1.2,col,.7);g.strokeCircle(a.x,a.y,r);
+      g.fillStyle(col,a.condition==='Горит'?.18:.11);g.fillEllipse(a.x,a.y+2,r*2.5,r*.72);
       if(a.condition==='Горит'){g.fillStyle(0xf8a14b,.8);g.fillTriangle(a.x-3,a.y,a.x+3,a.y,a.x,a.y-9);}
     });
     // Building condition is visible as the seal/cornice loses integrity.
@@ -1556,7 +1556,7 @@
     // Damaged/burning road traffic reflects condition changes without replacing the live camera.
     for(const car of this.trafficCars||[]) {
       if(car.condition==='Брошен') {g.lineStyle(1,0xd0ad71,.4);g.strokeCircle(car.x,car.y,10+Math.sin(time*.006)*2);}
-      if(car.condition==='Горит') {const flicker=.6+Math.sin(time*.04+car.x)*.25;g.fillStyle(0xec743b,flicker*.2);g.fillCircle(car.x,car.y-5,15);g.fillStyle(0xffb764,flicker);g.fillTriangle(car.x-6,car.y-4,car.x,car.y-20,car.x+6,car.y-4);g.fillStyle(0x484d4a,.2);g.fillCircle(car.x-3,car.y-18,6);}
+      if(car.condition==='Горит') {const flicker=.6+Math.sin(time*.04+car.x)*.25;g.fillStyle(0xec743b,flicker*.18);g.fillEllipse(car.x,car.y-3,35,13);g.fillStyle(0xffb764,flicker);g.fillTriangle(car.x-6,car.y-4,car.x,car.y-20,car.x+6,car.y-4);g.fillStyle(0x484d4a,.2);g.fillEllipse(car.x-3,car.y-18,11,6);}
     }
   };
 
