@@ -23,7 +23,7 @@
       const saved = localStorage.getItem(SAVE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const supported = parsed && parsed.state && Array.isArray(parsed.companies) && parsed.version === GAME_CONFIG.version;
+        const supported = parsed && parsed.state && Array.isArray(parsed.companies) && (parsed.version === GAME_CONFIG.version || /^8\.0\.\d+$/.test(String(parsed.version || '')));
         if (supported) {
           window.gameSimulation.loadSnapshot(parsed);
           document.getElementById('last-save-label').textContent = 'АВТОВОССТАНОВЛЕНО ИЗ v8';

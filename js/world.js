@@ -498,7 +498,7 @@ class RepublicCityScene extends Phaser.Scene {
     for (const inc of s.incidents) {
       if (inc.status === 'resolved') continue;
       let services = [];
-      if (inc.type === 'fire' || inc.type === 'arson') services = ['fire'];
+      if (['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)) services = ['fire'];
       else if (inc.type === 'medical') services = ['ambulance'];
       else if (inc.type === 'clash' || inc.type === 'riot') services = ['police', 'ambulance'];
       else if (inc.type === 'accident') services = ['police', 'ambulance'];
@@ -524,8 +524,9 @@ class RepublicCityScene extends Phaser.Scene {
 
   _dispatchVehicle(order) {
     const key = order.service === 'fire' ? 'fire' : order.service === 'ambulance' ? 'ambulance' : order.service === 'military' ? 'military' : order.service === 'bus' ? 'bus' : 'police';
-    const laneY = 596 + WORLD_U.random(-5, 5);
-    const x = 1290 + this.vehicles.length * 48;
+    const slot = this.vehicles.length;
+    const laneY = 574 + (slot % 7) * 7 + WORLD_U.random(-1.5, 1.5);
+    const x = 1288 + Math.floor(slot / 7) * 17;
     const sprite = this.add.image(x, laneY, `vehicle-${key}`).setOrigin(0.5, 0.5).setDepth(1000 + laneY);
     const unit = {
       id: order.id, service: key, sprite, x, y: laneY,
@@ -819,7 +820,7 @@ class RepublicCityScene extends Phaser.Scene {
     }
     for (const inc of s.incidents) {
       if (inc.status === 'resolved') continue;
-      if (inc.type === 'fire' || inc.type === 'arson') {
+      if (['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)) {
         const pulse = 0.72 + Math.sin(time * 0.012 + inc.x) * 0.18;
         this.fx.fillStyle(0x3a3027, 0.11); this.fx.fillEllipse(inc.x, inc.y + 1, 57 + pulse * 10, 17);
         this.fx.fillStyle(0xe36a32, 0.12); this.fx.fillEllipse(inc.x, inc.y - 5, 35 + pulse * 5, 13);

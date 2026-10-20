@@ -118,7 +118,7 @@
     if (old._updateFirePhysics) old._updateFirePhysics.call(this);
     const s = this.state;
     if (!s) return;
-    const activeFires = (s.incidents || []).filter(i => alive(i) && ['fire','arson'].includes(i.type));
+    const activeFires = (s.incidents || []).filter(i => alive(i) && ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type));
     const weather = s.weather || { id:'clear', temperature:18 };
     for (const camp of s.campSites || []) {
       if (camp.condition === 'Горит' || camp.condition === 'Тлеет') {
@@ -568,7 +568,7 @@
         if(p.targetCampId){const camp=(s.campSites||[]).find(c=>c.id===p.targetCampId);if(camp)this.sim._igniteCamp(camp,'попадание абстрактного зажигательного токена');}
         else if(p.targetBuilding){s.building.integrity=clamp((s.building.integrity||100)-rnd(5,13));s.building.status=s.building.integrity<25?'Разрушено':'Повреждено';const asset=(s.assets||[]).find(a=>a.kind==='building');if(asset){asset.integrity=clamp(asset.integrity-rnd(6,18));asset.condition=asset.integrity<20?'Разрушен':'Горит';}if(s.incidents.filter(alive).length<this.sim.config.maxIncidents){const fire=this.sim.addIncident('arson');if(fire){fire.x=640+rnd(-30,30);fire.y=232+rnd(-2,16);fire.districtId='center';fire.locationType='площадь';}}}
         else if(Math.random()<(Number(s.crowdAnger||0)>800?.68:.42)){
-          const activeFire=(s.incidents||[]).find(i=>alive(i)&&['fire','arson'].includes(i.type)&&Math.hypot(i.x-p.targetX,i.y-p.targetY)<75);
+          const activeFire=(s.incidents||[]).find(i=>alive(i)&&['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type)&&Math.hypot(i.x-p.targetX,i.y-p.targetY)<75);
           if(!activeFire&&s.campSites?.some(c=>Math.hypot(c.x-p.targetX,c.y-p.targetY)<48)){
             const camp=s.campSites.slice().sort((a,b)=>Math.hypot(a.x-p.targetX,a.y-p.targetY)-Math.hypot(b.x-p.targetX,b.y-p.targetY))[0];this.sim._igniteCamp(camp,'попадание абстрактного зажигательного токена');
           }else if(!activeFire&&s.incidents.filter(alive).length<this.sim.config.maxIncidents){

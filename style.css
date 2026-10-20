@@ -553,5 +553,26 @@ input[type="range"]::-moz-range-thumb { width: 8px; height: 8px; border: 2px sol
 @media (max-width:1050px){.crowd-anger-strip{grid-template-columns:1fr;gap:5px}.casualty-live{gap:6px 12px}}
 
 /* v8: compact decision systems for 13-inch displays */
-.v8-systems-panel{margin-top:16px}.v8-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.v8-grid>div{border:1px solid var(--line,#d6d2c7);border-radius:8px;padding:12px;min-width:0}.v8-grid h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px}.v8-grid label{display:flex;flex-direction:column;gap:5px;font-size:11px;margin:8px 0;color:var(--muted,#777)}.v8-grid input,.v8-grid select{width:100%;min-width:0;background:var(--panel,#f6f5f0);border:1px solid var(--line,#d6d2c7);padding:7px;border-radius:5px;color:inherit;font:inherit}.v8-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.v8-actions button{background:var(--panel-alt,#e9e7df);border:1px solid var(--line,#cbc8bd);border-radius:5px;padding:7px 9px;font:inherit;font-size:10px;color:inherit;cursor:pointer;transition:background .15s,border-color .15s}.v8-actions button:hover{background:#dce5df;border-color:#84998e}.v8-muted{font-size:10px;line-height:1.5;color:var(--muted,#777);margin:10px 0 0}.v8-logistics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 10px;font-size:10px}.v8-logistics span{display:flex;justify-content:space-between;border-bottom:1px solid var(--line,#d6d2c7);padding:4px 0;gap:5px}.v8-logistics b{font-variant-numeric:tabular-nums}.tactical-brief-wrap{margin-top:8px;padding:9px 12px;background:rgba(28,39,40,.96);color:#e0e4dc;border-left:3px solid #b7a16e;border-radius:3px}.tactical-brief-wrap>span{font:10px monospace;letter-spacing:.08em;color:#c5b17e}.tactical-brief-wrap p{font-size:11px;line-height:1.45;margin:5px 0 0;color:#e1e4dd}
-@media(max-width:1100px){.v8-grid{grid-template-columns:1fr}.v8-systems-panel{margin-top:10px}.v8-grid>div{padding:10px}}
+/* v8 controls use the same high-contrast dark system as the original dashboard. */
+.v8-systems-panel{margin-top:16px;color:var(--text)}
+.v8-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.v8-grid>div{border:1px solid var(--border);border-radius:8px;padding:12px;min-width:0;background:rgba(9,16,18,.24)}
+.v8-grid h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;color:#d7e1db}
+.v8-grid label{display:flex;flex-direction:column;gap:5px;font-size:11px;margin:8px 0;color:var(--muted)}
+.v8-grid input,.v8-grid select{width:100%;min-width:0;background:var(--surface);border:1px solid #3a4e50;padding:8px;border-radius:5px;color:var(--text);font:inherit;color-scheme:dark}
+.v8-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+#v8-systems-panel .v8-actions button{appearance:none;-webkit-appearance:none;flex:1 1 165px;min-width:0;min-height:34px;background:#1b2b2f;border:1px solid #405753;border-radius:5px;padding:8px 10px;font:600 10px/1.35 var(--sans);text-align:left;white-space:normal;color:#e6ebe4;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.025);transition:background .15s,border-color .15s,transform .15s}
+#v8-systems-panel .v8-actions button:hover{background:#29413e;border-color:#80b6ac;color:#fff;transform:translateY(-1px)}
+#v8-systems-panel .v8-actions button:active{transform:translateY(0)}
+#v8-systems-panel .v8-actions button:focus-visible{outline:2px solid #80b6ac;outline-offset:2px}
+#v8-systems-panel .v8-actions button:disabled{color:#82908d;background:#182225;border-color:#2d3a3d;opacity:.7;cursor:not-allowed}
+.v8-muted{font-size:10px;line-height:1.5;color:#aebbb6;margin:10px 0 0}
+#v8-dispatch-status{padding:7px 8px;background:#152126;border-left:2px solid #658e82;border-radius:3px;color:#d2dfd7}
+.v8-logistics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 10px;font-size:10px}
+.v8-logistics span{display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:4px 0;gap:5px;color:#bdc9c2}
+.v8-logistics b{font-variant-numeric:tabular-nums;color:#f0e8d4}
+.tactical-brief-wrap{margin-top:8px;padding:9px 12px;background:rgba(28,39,40,.96);color:#e0e4dc;border-left:3px solid #b7a16e;border-radius:3px}
+.tactical-brief-wrap>span{font:10px monospace;letter-spacing:.08em;color:#c5b17e}
+.tactical-brief-wrap p{font-size:11px;line-height:1.45;margin:5px 0 0;color:#e1e4dd}
+@media(max-width:1100px){.v8-grid{grid-template-columns:1fr}.v8-systems-panel{margin-top:10px}.v8-grid>div{padding:10px}#v8-systems-panel .v8-actions button{flex-basis:145px}}
+

@@ -190,11 +190,11 @@
     const crowd=Number(s?.crowdTarget||0), anger=Number(s?.crowdAnger||0), age=Number(s?.hoursElapsed||0);
     const liveFire=(s?.fireZones||[]).some(z=>z&&z.condition==='Горит');
     const depth=Number(s?.v7_2ExplicitFireDepth||0);
-    const severe=new Set(['clash','riot','looting','building_assault','radical_attack','barricade','fire','arson']);
+    const severe=new Set(['clash','riot','looting','building_assault','radical_attack','barricade','fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire']);
     if(!type && crowd<220 && anger<150) return null;
     if(type && severe.has(type) && !depth && crowd<220 && anger<150) return null;
     if(type && ['riot','clash','looting','building_assault','radical_attack','barricade'].includes(type) && crowd<160 && anger<110) return null;
-    if(type && ['fire','arson'].includes(type) && !depth && !liveFire && (age<4 || crowd<500 || anger<220)) return null;
+    if(type && ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(type) && !depth && !liveFire && (age<4 || crowd<500 || anger<220)) return null;
     return prior._spawnIncident ? prior._spawnIncident.call(this,type) : null;
   };
 

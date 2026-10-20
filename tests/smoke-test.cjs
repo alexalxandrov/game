@@ -201,7 +201,7 @@ clashScene._v6StartStreetClash(clashState);
 testMath.random = secondRandomClash;
 assert.ok(recordedInjuries.some(injury => injury.source === 'police'), 'police-initiated street violence can injure a protester');
 const snap = crisis.snapshot();
-assert.equal(snap.version, '8.0.0', 'save carries current project version');
+assert.equal(snap.version, '8.0.1', 'save carries current project version');
 assert.ok(crisis.state.forceCap >= 4, 'v6 autonomous police use a hardline baseline');
 assert.ok(crisis.state.v6Organization >= 0 && crisis.state.v6Organization <= 100, 'crowd organization remains bounded');
 
@@ -265,4 +265,67 @@ processSim.state.negotiationProcess.offer = 'компромисс';
 processSim.tick(1); processSim.tick(1); processSim.tick(1);
 assert.ok(processSim.state.negotiationProcess.round >= 1, 'negotiations advance through a timed process');
 assert.ok(processSim.state.tacticalBrief && processSim.state.tacticalBrief.includes('Цель'), 'tactical brief includes police task and protest goal');
-console.log('PASS: paced clock, clean calm start, no phantom camps/fires, persistent sourced asset fire/smoke, autonomous police cadence, gradual turnout, gas cohesion, crowd objectives, radicalization, 0–1000 anger, v8 political process, timed negotiations, union leverage, 100-unit logistics reserves, v7.2 migration, causal barricade fire and stopped burning traffic');
+// v8 dispatch regression: every new dispatch button must produce a physical vehicle and deduct only its required reserves.
+const dispatchSim = new window.RepublicSimulation();
+window.KonturV8.init(dispatchSim.state, false);
+const dispatchIncident = { id:'FIRE-DISPATCH-1', type:'fire', status:'active', x:710, y:405, fireIntensity:0.9, label:'Пожар в павильоне', serviceProgress:{} };
+dispatchSim.state.incidents.push(dispatchIncident);
+const dispatchScene = {
+  vehicles: [],
+  _dispatchVehicle(order) {
+    const slot = this.vehicles.length;
+    this.vehicles.push({ id:order.id, service:order.service, x:1288 + Math.floor(slot / 7) * 17, y:574 + (slot % 7) * 7, targetX:order.x, targetY:order.y, phase:'outbound', route:[{x:1130,y:595},{x:1010,y:558},{x:order.x,y:order.y}], routeStage:0, speed:102 });
+  }
+};
+const waterDispatch = window.KonturV8.dispatchResource(dispatchSim, dispatchScene, 'dispatch-water');
+assert.equal(waterDispatch.ok, true, 'water dispatch succeeds instead of crashing on an undeclared incident variable');
+assert.equal(dispatchScene.vehicles.length, 1, 'a click creates a moving fire vehicle');
+assert.equal(dispatchScene.vehicles[0].targetX, 710, 'fire vehicle targets the active incident coordinates');
+assert.equal(dispatchSim.state.fireLogistics.engines, 99, 'water dispatch consumes one engine');
+assert.equal(dispatchSim.state.fireLogistics.waterTenders, 99, 'water dispatch consumes one water tender');
+assert.equal(dispatchSim.state.fireLogistics.foam, 100, 'water dispatch does not consume foam');
+const foamDispatch = window.KonturV8.dispatchResource(dispatchSim, dispatchScene, 'dispatch-foam');
+assert.equal(foamDispatch.ok, true, 'foam vehicle can be dispatched independently');
+assert.equal(dispatchSim.state.fireLogistics.foamTeams, 99, 'foam dispatch consumes one foam team');
+assert.equal(dispatchSim.state.fireLogistics.foam, 99, 'foam dispatch consumes one foam unit');
+const ladderDispatch = window.KonturV8.dispatchResource(dispatchSim, dispatchScene, 'dispatch-ladder');
+assert.equal(ladderDispatch.ok, true, 'ladder vehicle can be dispatched independently');
+assert.equal(dispatchSim.state.fireLogistics.ladderTrucks, 99, 'ladder dispatch consumes one ladder truck');
+assert.equal(dispatchSim.state.fireLogistics.ladders, 99, 'ladder dispatch consumes one ladder reserve');
+const vehiclesBeforeExhaustion = dispatchScene.vehicles.length;
+dispatchSim.state.fireLogistics.waterTenders = 0;
+const exhaustedDispatch = window.KonturV8.dispatchResource(dispatchSim, dispatchScene, 'dispatch-water');
+assert.equal(exhaustedDispatch.ok, false, 'a service with no reserve reports exhaustion instead of phantom dispatch');
+assert.equal(dispatchScene.vehicles.length, vehiclesBeforeExhaustion, 'exhausted reserve creates no vehicle');
+assert.ok(dispatchSim.state.incidents[0].fireServiceEnRoute, 'fire incident is linked to dispatched apparatus');
+// Fire incident variants also receive a zone for the live flame/smoke layer.
+const variantFireSim = new window.RepublicSimulation();
+const variantFire = { id:'ROOF-TEST-1', type:'roof_fire', status:'active', x:820, y:360, label:'Пожар крыши', createdAt:0, fireArea:8, fireIntensity:0.8, fireRadius:18, smokeRadius:26, serviceProgress:{} };
+variantFireSim.state.incidents.push(variantFire);
+variantFireSim._updateFirePhysics();
+assert.ok(variantFireSim.state.fireZones.some(z => z.id === variantFire.id), 'roof fire is included in the physical fire-zone model');
+const smokePersistenceSim = new window.RepublicSimulation();
+window.KonturV8.init(smokePersistenceSim.state, false);
+const almostOut = { id:'SMOKE-PERSIST-1', type:'fire', status:'active', x:650, y:430, label:'Очаг проверки дыма', fireIntensity:0.001, fireArea:8, fireRadius:22, smokeRadius:56, fireServiceActive:true, fireMethod:'water', serviceProgress:{} };
+smokePersistenceSim.state.incidents.push(almostOut);
+smokePersistenceSim.state.fireZones.push({id:almostOut.id,x:650,y:430,radius:22,smokeRadius:56,intensity:0.001,condition:'Горит',source:'fire',smokeLife:0});
+window.KonturV8.minuteStep(smokePersistenceSim,1);
+assert.equal(almostOut.status,'resolved','a fully contained fire incident is closed by the minute-level service model');
+assert.ok(smokePersistenceSim.state.fireZones.some(z=>z.id===almostOut.id&&z.condition==='Потушено'&&z.smokeLife>0),'the extinguished fire leaves a persistent smoke zone');
+smokePersistenceSim._updateFirePhysics();
+assert.ok(smokePersistenceSim.state.fireZones.some(z=>z.id===almostOut.id&&z.condition==='Потушено'&&z.smokeLife>0),'the hourly compatibility layers do not erase lingering smoke');
+// Exercise the actual scene dispatch and animation methods with lightweight sprite stubs.
+const actualScene = Object.create(window.RepublicCityScene.prototype);
+actualScene.vehicles = [];
+actualScene.sim = { state:dispatchSim.state, serviceArrive() {} };
+actualScene.add = { image() { return { setOrigin(){return this;}, setDepth(){return this;}, setScale(){return this;}, setAngle(){return this;}, setPosition(){return this;}, setTint(){return this;}, destroy(){return this;} }; } };
+for (let i=0;i<36;i++) actualScene._dispatchVehicle({id:5000+i,service:'fire',x:710,y:405,incidentId:dispatchIncident.id,purpose:'тестовый выезд',v8Manual:true});
+assert.ok(actualScene.vehicles.every(v => v.x < 1500), 'the actual scene keeps dispatch queues near the map edge');
+const firstActualVehicle=actualScene.vehicles[0];
+const vehicleStartX=firstActualVehicle.x;
+actualScene._updateVehicles(dispatchSim.state,0.05);
+assert.ok(firstActualVehicle.x < vehicleStartX, 'the actual scene advances dispatched vehicles along their route');
+// Keep the helper model's burst equally bounded.
+assert.ok(dispatchScene.vehicles.every(v => v.x < 1600), 'dispatch burst vehicles spawn close enough to enter the visible street promptly');
+
+console.log('PASS: paced clock, clean calm start, no phantom camps/fires, persistent sourced asset fire/smoke, autonomous police cadence, gradual turnout, gas cohesion, crowd objectives, radicalization, 0–1000 anger, v8 political process, timed negotiations, union leverage, visible dispatch and reserve accounting, fire-type coverage, v7.2 migration, causal barricade fire and stopped burning traffic');
