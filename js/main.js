@@ -1,8 +1,9 @@
 'use strict';
 
 (function bootKontur() {
-  const SAVE_KEY = 'kontur-republic-save-v4';
-  const LEGACY_SAVE_KEY = 'kontur-republic-save-v3';
+  const SAVE_KEY = 'kontur-republic-save-v5';
+  const LEGACY_SAVE_KEY = 'kontur-republic-save-v4';
+  const LEGACY_SAVE_KEY_V3 = 'kontur-republic-save-v3';
   const LEGACY_SAVE_KEY_V2 = 'kontur-republic-save-v2';
 
   function showFatal(message) {
@@ -24,17 +25,18 @@
       let migrated = false;
       if (!saved) {
         saved = localStorage.getItem(LEGACY_SAVE_KEY);
+        if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V3);
         if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V2);
         migrated = Boolean(saved);
       }
       if (saved) {
         const parsed = JSON.parse(saved);
         const supported = parsed && parsed.state && Array.isArray(parsed.companies) &&
-          (parsed.version === GAME_CONFIG.version || (String(parsed.version || '').startsWith('2.') || String(parsed.version || '').startsWith('3.')));
+          (parsed.version === GAME_CONFIG.version || (['2.','3.','4.','5.'].some(prefix => String(parsed.version || '').startsWith(prefix))));
         if (supported) {
           window.gameSimulation.loadSnapshot(parsed);
           document.getElementById('last-save-label').textContent = migrated
-            ? 'СТАРОЕ СОХРАНЕНИЕ АДАПТИРОВАНО К v4'
+            ? 'СТАРОЕ СОХРАНЕНИЕ АДАПТИРОВАНО К v5'
             : 'АВТОВОССТАНОВЛЕНО ИЗ БРАУЗЕРА';
         }
       }

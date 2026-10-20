@@ -1,9 +1,9 @@
 'use strict';
 window.GAME_CONFIG = {
   title: 'КОНТУР — Республика Вереск',
-  version: '4.0.0',
+  version: '5.2.0',
   electionInterval: 20,
-  minutesPerTick: 15,
+  minutesPerTick: 1,
   maxCrowd: 5000,
   cityPopulation: 5000,
   maxVisibleAgents: 200,

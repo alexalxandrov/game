@@ -20,15 +20,7 @@ class RepublicCityScene extends Phaser.Scene {
     this._createPersonTextures();
     this._createVehicleTextures();
     this.add.image(640, 320, 'city-background').setDepth(0);
-    // Seamless background continuations let the monitor pan between city sectors without exposing empty canvas.
-    this.add.image(-640, 320, 'city-background').setDepth(0).setAlpha(0.96);
-    this.add.image(1920, 320, 'city-background').setDepth(0).setAlpha(0.96);
-    this.add.image(640, -320, 'city-background').setDepth(0).setAlpha(0.96);
-    this.add.image(640, 960, 'city-background').setDepth(0).setAlpha(0.96);
-    this.add.image(-640, -320, 'city-background').setDepth(0).setAlpha(0.96);
-    this.add.image(1920, -320, 'city-background').setDepth(0).setAlpha(0.96);
-    this.add.image(-640, 960, 'city-background').setDepth(0).setAlpha(0.96);
-    this.add.image(1920, 960, 'city-background').setDepth(0).setAlpha(0.96);
+    // One fixed background texture fills the camera frame; duplicate tiles caused the roof to reappear below the road.
     this._seedTraffic();
     this.night = this.add.graphics().setDepth(9000);
     this.fx = this.add.graphics().setDepth(9001);
@@ -376,6 +368,12 @@ class RepublicCityScene extends Phaser.Scene {
       this._spawnTrafficCar(direction > 0 ? -55 : 1335, direction, lane);
     }
     for (const car of this.trafficCars) {
+      // A vehicle that has caught fire or burned out is a physical road obstacle, not a sprite that can accelerate again.
+      if (['Горит', 'Выгорел'].includes(car.condition) || car.disabled) {
+        car.speed = 0; car.baseSpeed = 0;
+        car.sprite.setPosition(car.x, car.y).setDepth(car.y + 12).setAlpha(car.condition === 'Выгорел' ? 0.82 : 1);
+        continue;
+      }
       car.wait = Math.max(0, car.wait - dt);
       let targetSpeed = car.baseSpeed * (1 - blockage * 0.68);
       const atCrossing = car.x > 515 && car.x < 785;

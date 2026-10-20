@@ -346,7 +346,12 @@
         if (Math.random() < 0.055 * weatherFactor && activeFires.length < 5 && s.incidents.filter(alive).length < this.config.maxIncidents) {
           inc.spreadCooldown = 4;
           const drift=Number(inc.windDrift)||0;
-          const candidates=[{x:inc.x+drift*2.8+rnd(-35,35),y:inc.y+rnd(-25,25)},{x:inc.x+drift*1.6+rnd(-60,60),y:inc.y+rnd(-35,35)}, {x:640,y:560},{x:520,y:490},{x:760,y:475},{x:1105,y:565}];
+          // Secondary fires start near the active fire front; wind shifts the local spread instead of teleporting it.
+          const candidates=[
+            {x:inc.x+drift*2.0+rnd(-28,28),y:inc.y+rnd(-24,24)},
+            {x:inc.x+drift*1.5+rnd(-48,48),y:inc.y+rnd(-34,34)},
+            {x:inc.x+rnd(-66,66),y:inc.y+rnd(-46,46)}
+          ];
           const target=choose(candidates);
           const next = this._spawnIncident('fire');
           if (next) { next.x = clamp(target.x,50,1230); next.y = clamp(target.y,300,630); next.fireArea = 4; next.fireIntensity = 0.5; next.spreadFrom = inc.id; s.fireSpreadCount = (s.fireSpreadCount || 0) + 1; this._radio('Пожарные','Диспетчерская',`Вторичный очаг зафиксирован рядом с ${inc.label.toLowerCase()}; требуется дополнительная бригада.`, 'critical','fire',next.id); }
@@ -676,8 +681,8 @@
       this._publishCrisisEvent('protest','looting',`Зафиксирована попытка мародёрства: цель — ${target}`,`Небольшая группа отделилась от собрания; большинство участников не присоединилось. Общественная оценка акции стала более неоднородной.`,{severity:0.9,channel:'Гражданский',speaker:'Городской наблюдатель',tone:'warning'});
     }
     if(s.tension>70 && ratio>0.26 && now-(s.lastBarricadeAt||-99)>4 && Math.random()<(s.tension>82?.24:.10)) {
+      // Construction and ignition are separate events. A new barrier never starts burning by itself.
       s.lastBarricadeAt=now; this._createBarricade(640+rnd(-180,180),566,'protest');
-      if(Math.random()<0.20) { const b=choose(s.barricades); if(b) b.burning=true; }
     }
     if(s.tension>80 && ratio>0.54 && s.building.integrity>0 && now-(s.lastSiegeAt||-99)>8 && Math.random()<0.12) {
       s.lastSiegeAt=now; s.building.siege=clamp(s.building.siege+irnd(12,28));
@@ -924,8 +929,12 @@
     }
     // A fire can ignite vehicles/barricades, while emergency corridors reduce secondary risk.
     if(s.fireZones.length && Math.random()<0.20) {
-      const b=s.barricades.find(x=>x.status!=='cleared'&&!x.burning);
-      if(b && Math.random()<0.45) { b.burning=true; b.condition='Горит'; this._radio('Пожарные','Наблюдатель','Огонь перекинулся на часть временной баррикады; зона дыма расширяется.','critical','fire'); }
+      const b=s.barricades.find(x=>x.status!=='cleared'&&x.status!=='burned'&&!x.burning&&s.fireZones.some(z=>Math.hypot(z.x-x.x,z.y-x.y)<(z.radius||18)+14));
+      if(b && Math.random()<0.45) {
+        if (typeof this._v5IgniteBarricade === 'function') this._v5IgniteBarricade(b, 'распространение огня с соседнего очага');
+        else { b.burning=true; b.condition='Горит'; b.fireStartedAt=now; b.ignitionCause='распространение огня с соседнего очага'; }
+        this._radio('Пожарные','Наблюдатель','Огонь перекинулся на баррикаду в пределах соседнего очага; зона дыма расширяется.','critical','fire');
+      }
     }
     if(s.emergencyCorridor && now>(s.corridorUntil||0)) s.emergencyCorridor=false;
     s.gasZones=s.gasZones.filter(z=>z.life>0); s.smokeZones=s.smokeZones.filter(z=>z.life>0);

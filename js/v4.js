@@ -129,7 +129,7 @@
         camp.fireIntensity = clamp((camp.fireIntensity || 0.6) + (controlled ? -0.22 : rain * 0.025), 0.08, 2.2);
         camp.integrity = Math.max(0, (camp.integrity ?? 100) - (controlled ? 17 : 9 + camp.fireIntensity * 2.2) * rain);
         if (camp.fireRemaining <= 0 || camp.integrity <= 0) {
-          camp.condition = 'Выжжен'; camp.integrity = 0; camp.fireRemaining = 0; camp.rebuildAt = (s.day || 1) + irnd(3, 18);
+          camp.condition = 'Выжжен'; camp.integrity = 0; camp.fireRemaining = 0; camp.burnedAt = s.hoursElapsed || 0; camp.rebuildAt = (s.day || 1) + irnd(3, 18);
           s.campsBurned = (s.campsBurned || 0) + 1;
           const z = (s.fireZones || []).find(q => q.id === `CAMP-${camp.id}`); if (z) z.condition = 'Выжжен';
           this._radio('Пожарные','Старший пожарной смены',`${camp.name}: открытое горение прекратилось. Палатки выгорели; остатки остаются опасными до разбора.`, 'warning','fire',camp.incidentId || null);
@@ -153,10 +153,9 @@
           this._radio('Гражданский','Волонтёрский пункт',`${camp.name}: на месте выгоревшего лагеря появились временные укрытия.`, 'info','citizens');
         }
       } else if (camp.condition === 'Цел' || camp.condition === 'Повреждён') {
+        // A camp ignites only from a real active fire reaching its perimeter or an explicit firebrand impact.
         const nearestFire = activeFires.find(i => Math.hypot((i.x||640)-camp.x, (i.y||420)-camp.y) < (i.fireRadius || 18) + camp.radius * 0.7);
-        const arsonNearby = (s.incidents || []).find(i => alive(i) && ['arson','riot','radical_attack'].includes(i.type) && Math.hypot((i.x||640)-camp.x,(i.y||420)-camp.y)<camp.radius+58);
-        const intentionalChance = (s.crowdAnger || 0) > 720 && (s.hoursElapsed || 0) - (camp.lastIgnitionCheck || -999) > 1.5 && Math.random() < ((s.crowdAnger || 0) - 700) / 9500;
-        if (nearestFire || arsonNearby || intentionalChance) this._igniteCamp(camp, nearestFire ? 'распространение огня' : arsonNearby ? 'локальный очаг беспорядков' : 'случайный или намеренный поджог');
+        if (nearestFire) this._igniteCamp(camp, 'распространение открытого огня от соседнего очага');
         if (camp.condition === 'Повреждён' && (s.day || 1) >= (camp.rebuildAt || 99999) && (s.policies?.infrastructure || 0) > 55 && s.treasury > 0.2) {
           camp.condition = 'Цел'; camp.integrity = 72; camp.rebuildAt = 0; s.treasury -= 0.05;
           this._radio('Правительственный','Городское хозяйство',`${camp.name}: восстановлены часть тентов и укрытий из резервного фонда.`, 'info','government');
@@ -337,7 +336,7 @@
       this.crisisHudReadout = this.add.text(1020, 107, '', { fontFamily:'monospace', fontSize:'7px', color:'#cdd6ce', lineSpacing:1 }).setScrollFactor(0).setDepth(12002);
     }
     if (this.crisisHudTitle) this.crisisHudTitle.setText('КАМЕРА · ПЛОЩАДЬ РЕСПУБЛИКИ');
-    if (this.cameras?.main) { this.cameras.main.stopFollow?.(); this.cameras.main.centerOn(640, 430); this.cameras.main.setZoom(1); }
+    if (this.cameras?.main) { this.cameras.main.stopFollow?.(); this.cameras.main.centerOn(640, 320); this.cameras.main.setZoom(1); }
   };
 
   P._addPerson = function(index) {
@@ -408,7 +407,7 @@
     if (Array.isArray(s.districts)) s.districts.forEach(d=>{ if(d.id!=='center') d.crowd=0; });
     const c=this.cameras.main;
     // Keep the full plaza in frame: no sector hopping or hidden second location.
-    if (immediate || Math.abs(c.midPoint?.x - 640) > 10 || Math.abs(c.midPoint?.y - 430) > 10) { c.stopFollow?.(); c.centerOn(640,430); c.setZoom(1); }
+    if (immediate || Math.abs(c.midPoint?.x - 640) > 10 || Math.abs(c.midPoint?.y - 320) > 10) { c.stopFollow?.(); c.centerOn(640,320); c.setZoom(1); }
     if (this.crisisCameraDistrict !== 'center' && this.crisisHudTitle) this.crisisHudTitle.setText('КАМЕРА · ПЛОЩАДЬ РЕСПУБЛИКИ');
     this.crisisCameraDistrict='center';
   };
