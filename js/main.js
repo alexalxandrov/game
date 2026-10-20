@@ -1,9 +1,9 @@
 'use strict';
 
 (function bootKontur() {
-  const SAVE_KEY = 'kontur-republic-save-v7_2';
+  const SAVE_KEY = 'kontur-republic-save-v8';
   // Previous versions remain available through the explicit Load button; do not auto-restore a runaway v6 autosave.
-  const LEGACY_SAVE_KEYS = ['kontur-republic-save-v7_1','kontur-republic-save-v7','kontur-republic-save-v6','kontur-republic-save-v5','kontur-republic-save-v4','kontur-republic-save-v3','kontur-republic-save-v2'];
+  const LEGACY_SAVE_KEYS = ['kontur-republic-save-v7_2','kontur-republic-save-v7_1','kontur-republic-save-v7','kontur-republic-save-v6','kontur-republic-save-v5','kontur-republic-save-v4','kontur-republic-save-v3','kontur-republic-save-v2'];
 
   function showFatal(message) {
     const parent = document.getElementById('game-container');
@@ -26,7 +26,7 @@
         const supported = parsed && parsed.state && Array.isArray(parsed.companies) && parsed.version === GAME_CONFIG.version;
         if (supported) {
           window.gameSimulation.loadSnapshot(parsed);
-          document.getElementById('last-save-label').textContent = 'АВТОВОССТАНОВЛЕНО ИЗ v7.2';
+          document.getElementById('last-save-label').textContent = 'АВТОВОССТАНОВЛЕНО ИЗ v8';
         } else if (LEGACY_SAVE_KEYS.some(key => Boolean(localStorage.getItem(key))) || saved) {
           const label = document.getElementById('last-save-label');
           if (label) label.textContent = 'НОВАЯ СИМУЛЯЦИЯ · ПРЕДЫДУЩЕЕ СОХРАНЕНИЕ ДОСТУПНО ЧЕРЕЗ «ЗАГРУЗИТЬ»';

@@ -310,6 +310,7 @@ class RepublicCityScene extends Phaser.Scene {
     build('vehicle-police', '#d9d8cf', '#314957', 'police');
     build('vehicle-ambulance', '#e3e1d8', '#7eaaa0', 'ambulance');
     build('vehicle-fire', '#b94e3c', '#e1b05b', 'fire');
+    build('vehicle-bus', '#b7a86c', '#314957', 'bus');
     build('vehicle-military', '#666f59', '#9a9b7c', 'military');
     const carColors = ['#a5aaa3','#778c91','#b3a18a','#555f61','#8d766d','#b7b7ab','#6d8390','#9c9a7b'];
     carColors.forEach((color, i) => {
@@ -522,19 +523,19 @@ class RepublicCityScene extends Phaser.Scene {
   }
 
   _dispatchVehicle(order) {
-    const key = order.service === 'fire' ? 'fire' : order.service === 'ambulance' ? 'ambulance' : order.service === 'military' ? 'military' : 'police';
+    const key = order.service === 'fire' ? 'fire' : order.service === 'ambulance' ? 'ambulance' : order.service === 'military' ? 'military' : order.service === 'bus' ? 'bus' : 'police';
     const laneY = 596 + WORLD_U.random(-5, 5);
     const x = 1290 + this.vehicles.length * 48;
     const sprite = this.add.image(x, laneY, `vehicle-${key}`).setOrigin(0.5, 0.5).setDepth(1000 + laneY);
     const unit = {
       id: order.id, service: key, sprite, x, y: laneY,
       targetX: order.x, targetY: order.y, incidentId: order.incidentId,
-      purpose: order.purpose, phase: 'outbound', speed: key === 'military' ? 70 : 102,
+      purpose: order.purpose, phase: 'outbound', speed: key === 'military' ? 70 : key === 'bus' ? 64 : 102,
       routeStage: 0, route: [{ x: 1130, y: 595 }, { x: 1010, y: 558 }, { x: order.x, y: order.y }],
       target: { x: 1130, y: 595 }, sirenPhase: Math.random() * 7, age: 0,
       arrived: false, returnTimer: 0
     };
-    sprite.setScale(key === 'military' ? 1.18 : 1.04);
+    sprite.setScale(key === 'military' ? 1.18 : key === 'bus' ? 1.28 : 1.04);
     this.vehicles.push(unit);
   }
 
@@ -838,9 +839,9 @@ class RepublicCityScene extends Phaser.Scene {
         this.fx.fillStyle(0xc9564b, pulse); this.fx.fillRect(inc.x-54, inc.y-4, 108, 8);
         this.fx.lineStyle(2,0xe3b66f,.7); this.fx.strokeRect(inc.x-47,inc.y-9,94,18);
       } else if (inc.type === 'medical') {
-        this.fx.lineStyle(1, 0x8cc2b7, 0.5); this.fx.strokeCircle(inc.x, inc.y, 13 + Math.sin(time * 0.005) * 2);
+        this.fx.lineStyle(2, 0x8cc2b7, 0.62); this.fx.beginPath(); this.fx.moveTo(inc.x-6,inc.y); this.fx.lineTo(inc.x+6,inc.y); this.fx.moveTo(inc.x,inc.y-6); this.fx.lineTo(inc.x,inc.y+6); this.fx.strokePath();
       } else if (inc.type === 'accident') {
-        this.fx.lineStyle(2, 0xd0b16d, 0.48); this.fx.strokeCircle(inc.x, inc.y, 16);
+        this.fx.lineStyle(2, 0xd0b16d, 0.55); this.fx.beginPath(); this.fx.moveTo(inc.x-7,inc.y-5); this.fx.lineTo(inc.x+7,inc.y+5); this.fx.moveTo(inc.x+7,inc.y-5); this.fx.lineTo(inc.x-7,inc.y+5); this.fx.strokePath();
       }
     }
     this.interactionMarks = this.interactionMarks.filter(mark => mark.expires > time);
@@ -848,12 +849,12 @@ class RepublicCityScene extends Phaser.Scene {
       const remaining = WORLD_U.clamp((mark.expires - time) / 850, 0, 1);
       if (mark.type === 'police-contact') {
         this.fx.lineStyle(1.5, 0xd0ad71, remaining * 0.7);
-        this.fx.strokeCircle(mark.x, mark.y - 7, 8 + (1 - remaining) * 5);
+        this.fx.beginPath(); this.fx.moveTo(mark.x-5,mark.y-7); this.fx.lineTo(mark.x+5,mark.y-7); this.fx.strokePath();
         this.fx.lineStyle(2, 0xd0ad71, remaining * 0.7);
         this.fx.beginPath(); this.fx.moveTo(mark.x - 5, mark.y - 12); this.fx.lineTo(mark.x + 5, mark.y - 2); this.fx.strokePath();
       } else if (mark.type === 'throw' || mark.type === 'throw-impact') {
         this.fx.lineStyle(1.5, mark.type === 'throw' ? 0xd5b778 : 0xef8b50, remaining * 0.7);
-        this.fx.strokeCircle(mark.x, mark.y - 7, 5 + (1 - remaining) * 8);
+        this.fx.beginPath(); this.fx.moveTo(mark.x-4,mark.y-7); this.fx.lineTo(mark.x+4,mark.y-7); this.fx.strokePath();
         if (mark.type === 'throw-impact') {
           this.fx.fillStyle(0xf1a05a, remaining * 0.45); this.fx.fillCircle(mark.x, mark.y - 4, 9 * remaining + 2);
         }
@@ -863,7 +864,7 @@ class RepublicCityScene extends Phaser.Scene {
         this.fx.fillStyle(0xffc16d, remaining * 0.88); this.fx.fillTriangle(mark.x - 5, mark.y - 6, mark.x, mark.y - 18 - flicker * 5, mark.x + 5, mark.y - 6);
       } else {
         this.fx.lineStyle(1.5, 0xd47768, remaining * 0.75);
-        this.fx.strokeCircle(mark.x, mark.y - 7, 9 + (1 - remaining) * 4);
+        this.fx.beginPath(); this.fx.moveTo(mark.x-6,mark.y-7); this.fx.lineTo(mark.x+6,mark.y-7); this.fx.strokePath();
         this.fx.beginPath(); this.fx.moveTo(mark.x - 6, mark.y - 13); this.fx.lineTo(mark.x + 6, mark.y - 1); this.fx.strokePath();
         this.fx.beginPath(); this.fx.moveTo(mark.x + 6, mark.y - 13); this.fx.lineTo(mark.x - 6, mark.y - 1); this.fx.strokePath();
       }

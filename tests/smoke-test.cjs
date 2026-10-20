@@ -29,7 +29,7 @@ const context = {
 };
 window.Phaser = Phaser;
 vm.createContext(context);
-for (const file of ['js/config.js','js/utils.js','js/simulation.js','js/world.js','js/ui.js','js/crisis.js','js/v4.js','js/v5.js','js/v6.js','js/v7.js','js/v7_2.js']) {
+for (const file of ['js/config.js','js/utils.js','js/simulation.js','js/world.js','js/ui.js','js/crisis.js','js/v4.js','js/v5.js','js/v6.js','js/v7.js','js/v7_2.js','js/v8.js']) {
   vm.runInContext(fs.readFileSync(path.join(process.cwd(), file), 'utf8'), context, { filename: file });
 }
 
@@ -201,7 +201,7 @@ clashScene._v6StartStreetClash(clashState);
 testMath.random = secondRandomClash;
 assert.ok(recordedInjuries.some(injury => injury.source === 'police'), 'police-initiated street violence can injure a protester');
 const snap = crisis.snapshot();
-assert.equal(snap.version, '7.2.0', 'save carries current project version');
+assert.equal(snap.version, '8.0.0', 'save carries current project version');
 assert.ok(crisis.state.forceCap >= 4, 'v6 autonomous police use a hardline baseline');
 assert.ok(crisis.state.v6Organization >= 0 && crisis.state.v6Organization <= 100, 'crowd organization remains bounded');
 
@@ -244,4 +244,25 @@ testScene._updateTraffic(0.05, testScene.sim.state);
 assert.equal(testScene.trafficCars[0].x, stoppedX, 'burning vehicle remains fixed in the road');
 assert.equal(testScene.trafficCars[0].speed, 0, 'burning vehicle speed is zero');
 
-console.log('PASS: paced clock, clean calm start, no phantom camps/fires, persistent sourced asset fire/smoke, autonomous police cadence, gradual turnout, gas cohesion, crowd objectives, radicalization, 0–1000 anger, v7.2 save/load, causal barricade fire and stopped burning traffic');
+// v8 political process, logistics and minute-level systems.
+const processSim = new window.RepublicSimulation();
+window.KonturV8.init(processSim.state, false);
+assert.equal(processSim.state.fireLogistics.ladders, 100, '100 ladder trucks are available initially');
+assert.equal(processSim.state.fireLogistics.foam, 100, '100 foam units are available initially');
+assert.equal(processSim.state.fireLogistics.ambulances, 100, '100 ambulances are available initially');
+processSim.state.policeVideo = true;
+processSim.state.media.policeVideo = true;
+for (let i = 0; i < 3; i++) processSim.tick(1);
+assert.ok(processSim.state.crowdAnger > 6, 'viral media causes an immediate mobilization shock');
+processSim.state.unions.active = true;
+processSim.state.unions.strength = 10;
+for (let i = 0; i < 15; i++) processSim.tick(1);
+assert.ok(processSim.state.unions.leverage > 0, 'unions accumulate independent negotiating leverage');
+processSim.state.negotiationProcess.active = true;
+processSim.state.negotiationProcess.duration = 2;
+processSim.state.negotiationProcess.elapsed = 0;
+processSim.state.negotiationProcess.offer = 'компромисс';
+processSim.tick(1); processSim.tick(1); processSim.tick(1);
+assert.ok(processSim.state.negotiationProcess.round >= 1, 'negotiations advance through a timed process');
+assert.ok(processSim.state.tacticalBrief && processSim.state.tacticalBrief.includes('Цель'), 'tactical brief includes police task and protest goal');
+console.log('PASS: paced clock, clean calm start, no phantom camps/fires, persistent sourced asset fire/smoke, autonomous police cadence, gradual turnout, gas cohesion, crowd objectives, radicalization, 0–1000 anger, v8 political process, timed negotiations, union leverage, 100-unit logistics reserves, v7.2 migration, causal barricade fire and stopped burning traffic');

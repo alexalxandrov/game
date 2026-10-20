@@ -12,7 +12,7 @@
   ['saveGame','loadGame','updateStats'].forEach(k => priorUI[k] = UP[k]);
   const clamp = (v, lo=0, hi=100) => Math.max(lo, Math.min(hi, Number(v) || 0));
   const alive = x => x && x.status !== 'resolved';
-  const SAVE_KEY = 'kontur-republic-save-v7_2';
+  const SAVE_KEY = 'kontur-republic-save-v8';
 
   if (window.GAME_CONFIG) {
     window.GAME_CONFIG.version = '7.2.0';
@@ -258,14 +258,14 @@
     try {
       localStorage.setItem(SAVE_KEY,JSON.stringify(this.sim.snapshot()));
       const label=document.getElementById('last-save-label');
-      if(label) label.textContent=`СОХРАНЕНО v7.2 ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`;
+      if(label) label.textContent=`СОХРАНЕНО v8 ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`;
       if(!automatic) this.toast('Игра сохранена','Сохранены явка, цель движения и причинные события.','success');
       return true;
     } catch(err) { if(!automatic) this.toast('Ошибка сохранения',err.message,'error'); return false; }
   };
   UP.loadGame = function() {
     try {
-      const keys=[SAVE_KEY,'kontur-republic-save-v7_1','kontur-republic-save-v7','kontur-republic-save-v6','kontur-republic-save-v5','kontur-republic-save-v4','kontur-republic-save-v3','kontur-republic-save-v2'];
+      const keys=[SAVE_KEY,'kontur-republic-save-v7_2','kontur-republic-save-v7_1','kontur-republic-save-v7','kontur-republic-save-v6','kontur-republic-save-v5','kontur-republic-save-v4','kontur-republic-save-v3','kontur-republic-save-v2'];
       let raw=null, found=null;
       for(const key of keys){raw=localStorage.getItem(key);if(raw){found=key;break;}}
       if(!raw){this.toast('Сохранение не найдено','Сначала сохраните игру.','warning');return false;}
@@ -278,7 +278,7 @@
         try { localStorage.setItem(SAVE_KEY,JSON.stringify(this.sim.snapshot())); } catch(_) {}
       }
       this.draft={...this.sim.state.policies}; this._syncPolicyInputs(); this.renderAll(true);
-      const label=document.getElementById('last-save-label'); if(label) label.textContent=`ЗАГРУЖЕНО ${found} → v7.2`;
+      const label=document.getElementById('last-save-label'); if(label) label.textContent=`ЗАГРУЖЕНО ${found} → v8`;
       this.toast('Сохранение загружено','История сохранена; новая логика явки и событий активна.','success'); return true;
     } catch(err) { this.toast('Ошибка загрузки',`Не удалось прочитать сохранение: ${err.message}`,'error'); return false; }
   };

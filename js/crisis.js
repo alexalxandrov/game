@@ -1512,6 +1512,7 @@
     const g=this.fx; if(!g) return;
     // Larger fire areas, drifting smoke, damaged building and barricade silhouettes.
     (s.fireZones||[]).forEach(z=>{
+      if(z.condition==='Потушено'){const left=clamp((z.smokeLife||0)/20,0,1);if(left>0){const smoke=Math.max(18,z.smokeRadius||32);g.fillStyle(0x353d3d,.09*left);g.fillEllipse((z.x||0)+(z.windDrift||0),(z.y||0)-smoke*.4,smoke*2.1,smoke*.85);for(let k=0;k<3;k++){const up=(time*.006+k*12)%(smoke+18);g.fillStyle(0x4b5251,.045*left);g.fillEllipse((z.x||0)+Math.sin(time*.001+k)*smoke*.2,(z.y||0)-up-10,9+up*.25,7+up*.2);}}return;}
       const pulse=.65+Math.sin(time*.013+(z.x||0))*.16;
       const radius=Math.max(12,z.radius||18), smoke=Math.max(radius,z.smokeRadius||32);
       g.fillStyle(0x292f31,0.045);g.fillEllipse((z.x||0)+(z.windDrift||0), (z.y||0)-smoke*.22,smoke*2.15,smoke*1.05);
@@ -1555,7 +1556,7 @@
     this._renderFixedCrisisHUD(s,time);
     // Damaged/burning road traffic reflects condition changes without replacing the live camera.
     for(const car of this.trafficCars||[]) {
-      if(car.condition==='Брошен') {g.lineStyle(1,0xd0ad71,.4);g.strokeCircle(car.x,car.y,10+Math.sin(time*.006)*2);}
+      if(car.condition==='Брошен') {g.lineStyle(2,0xd0ad71,.5);g.beginPath();g.moveTo(car.x-8,car.y-4);g.lineTo(car.x+8,car.y+4);g.moveTo(car.x+8,car.y-4);g.lineTo(car.x-8,car.y+4);g.strokePath();}
       if(car.condition==='Горит') {const flicker=.6+Math.sin(time*.04+car.x)*.25;g.fillStyle(0xec743b,flicker*.18);g.fillEllipse(car.x,car.y-3,35,13);g.fillStyle(0xffb764,flicker);g.fillTriangle(car.x-6,car.y-4,car.x,car.y-20,car.x+6,car.y-4);g.fillStyle(0x484d4a,.2);g.fillEllipse(car.x-3,car.y-18,11,6);}
     }
   };
@@ -1604,7 +1605,7 @@
     const nodes=[{id:'center',x:x+58,y:y+47},{id:'station',x:x+23,y:y+62},{id:'workers',x:x+89,y:y+66},{id:'ring',x:x+143,y:y+75},{id:'suburbs',x:x+195,y:y+43}];
     const edges=[[0,1],[0,2],[2,3],[3,4],[1,2],[2,4]];
     g.lineStyle(1,0x7f9186,.5);edges.forEach(([a,b])=>{g.beginPath();g.moveTo(nodes[a].x,nodes[a].y);g.lineTo(nodes[b].x,nodes[b].y);g.strokePath();});
-    nodes.forEach(n=>{const d=(s.districts||[]).find(v=>v.id===n.id)||{tension:30,blockage:0,crowd:0};const t=clamp(d.tension);const color=t>75?0xd56c5c:t>55?0xd4ad6a:0x7baca0;g.fillStyle(color,.9);g.fillCircle(n.x,n.y,3+t*.025);g.lineStyle(n.id===(s.activeDistrict||'center')?2:1,n.id===(s.activeDistrict||'center')?0xf1d7a5:color,n.id===(s.activeDistrict||'center')?1:.55);g.strokeCircle(n.x,n.y,n.id===(s.activeDistrict||'center')?9:5);});
+    nodes.forEach(n=>{const d=(s.districts||[]).find(v=>v.id===n.id)||{tension:30,blockage:0,crowd:0};const t=clamp(d.tension);const color=t>75?0xd56c5c:t>55?0xd4ad6a:0x7baca0;g.fillStyle(color,.9);g.fillRect(n.x-3,n.y-3,6,6);if(n.id===(s.activeDistrict||'center')){g.lineStyle(2,0xf1d7a5,.9);g.beginPath();g.moveTo(n.x-7,n.y);g.lineTo(n.x+7,n.y);g.moveTo(n.x,n.y-7);g.lineTo(n.x,n.y+7);g.strokePath();}});
     g.fillStyle(0xbec8bf,.8);g.fillRect(x+10,y+91,w-20,1);
     const active=(s.districts||[]).find(d=>d.id===(s.activeDistrict||'center'))||{name:'Площадь',crowd:0,tension:0,blockage:0};
     const lines=[`${active.name.toUpperCase()}`,`ЯВКА ${Math.round(active.crowd||0)} · НАПРЯЖЕНИЕ ${Math.round(active.tension||0)}%`,`ДОРОГИ ${Math.round((active.blockage||0)*100)}% · ДЕНЬ ${s.day} ${String(s.hour).padStart(2,'0')}:${String(s.minute||0).padStart(2,'0')}`];
@@ -1669,7 +1670,7 @@
     original.updateStats.call(this);
     const s=this.sim.state;
     const pm=document.getElementById('prime-minister-name');if(pm)pm.textContent=s.primeMinister||'Ирина Волкова';
-    const ver=document.querySelector('.app-footer span');if(ver)ver.textContent='КОНТУР // ВЕРСИЯ 3.0.0';
+    const ver=document.querySelector('.app-footer span');if(ver)ver.textContent='КОНТУР // ВЕРСИЯ 8.0.0';
     const mode=document.getElementById('state-mode');if(mode) {mode.textContent=s.stateMode||'Обычное управление';mode.className=`state-mode ${s.stateModeCode||'normal'}`;}
     const active=(s.districts||[]).find(d=>d.id===(s.activeDistrict||'center'));
     const subtitle=document.getElementById('world-subtitle');if(subtitle&&active)subtitle.textContent=`Камера мониторинга: ${active.name} · напряжённость ${Math.round(active.tension)}% · загрузка дорог ${Math.round(active.blockage*100)}%`;
