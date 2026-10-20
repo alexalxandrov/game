@@ -144,25 +144,32 @@ class RepublicCityScene extends Phaser.Scene {
     polygon([[643,44],[671,50],[643,58]], '#4f9b91');
     rect(430, 119, 2, 30, '#756e60'); polygon([[432,121],[451,125],[432,132]], '#4f988e');
     rect(847, 119, 2, 30, '#756e60'); polygon([[849,121],[868,125],[849,132]], '#c29c59');
-    // Forecourt, large stone pavers with perspective convergence.
-    rect(0, 262, w, 275, '#9a9d92');
-    polygon([[0,262],[1280,262],[1280,537],[0,537]], '#a7a79a');
-    // Surface wear, subtle patches and stone joints.
-    for (let r = 0; r < 12; r++) {
-      const y = 266 + r * r * 1.65;
-      line(0, y, w, y, r % 2 ? '#8d938a' : '#c1bca9', r > 8 ? 2 : 1);
+    // Forecourt: worn asphalt with aggregate, repaired patches, fine cracks and faded municipal paint.
+    rect(0, 262, w, 275, '#454d4d');
+    polygon([[0,262],[1280,262],[1280,537],[0,537]], '#4a5251');
+    // Broad low-contrast repair patches, embedded grit and uneven asphalt tone.
+    for (let i = 0; i < 32; i++) {
+      const px = rand(-20, 1240), py = rand(274, 522), pw = rand(28, 130), ph = rand(5, 24);
+      ctx.fillStyle = i % 3 === 0 ? 'rgba(20,28,29,.12)' : 'rgba(174,177,162,.035)';
+      ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+pw,py+rand(-2,3)); ctx.lineTo(px+pw-rand(2,12),py+ph); ctx.lineTo(px-rand(1,9),py+ph-rand(0,4)); ctx.closePath(); ctx.fill();
     }
-    for (let x = -450; x < 1750; x += 56) {
-      line(640 + (x - 640) * .10, 263, x, 537, 'rgba(80,91,85,.36)', 1);
+    for (let i = 0; i < 1900; i++) {
+      const x = rand(0,1280), y = rand(266,530);
+      ctx.fillStyle = Math.random() > .56 ? 'rgba(12,18,19,.19)' : 'rgba(204,205,188,.12)';
+      ctx.fillRect(x,y,rand(.5,2.2),rand(.5,1.4));
     }
-    // Paver edge bands, worn patches and fine grain.
-    line(0, 274, 1280, 274, '#d0c7b5', 4);
-    line(0, 529, 1280, 529, '#747f79', 3);
-    for (let i = 0; i < 1400; i++) {
-      const x = rand(0, 1280), y = rand(266, 530);
-      ctx.fillStyle = Math.random() > .5 ? 'rgba(54,68,64,.10)' : 'rgba(231,226,211,.16)';
-      ctx.fillRect(x, y, rand(1, 4), 1);
+    // Fine cracks and sealed repair seams, never a tiled stone-floor pattern.
+    for (let i = 0; i < 23; i++) {
+      let x = rand(25,1250), y = rand(280,515);
+      ctx.beginPath(); ctx.moveTo(x,y);
+      for (let j = 0; j < 4; j++) { x += rand(-13,14); y += rand(3,10); ctx.lineTo(x,y); }
+      ctx.strokeStyle = i % 4 === 0 ? 'rgba(185,174,145,.22)' : 'rgba(15,21,22,.30)'; ctx.lineWidth = i % 4 === 0 ? 2 : 1; ctx.stroke();
     }
+    // Faded lane/keep-clear markings across the civic forecourt.
+    ctx.save(); ctx.setLineDash([24,18]); ctx.strokeStyle = 'rgba(205,201,174,.25)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(420,510); ctx.lineTo(860,510); ctx.stroke(); ctx.restore();
+    line(0, 274, 1280, 274, 'rgba(195,197,180,.22)', 2);
+    line(0, 529, 1280, 529, '#343c3c', 3);
     // Planters / trees at the sides, drawn as real landscaped beds rather than icons.
     const drawTree = (cx, cy, scale = 1) => {
       ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
@@ -498,7 +505,7 @@ class RepublicCityScene extends Phaser.Scene {
     for (const inc of s.incidents) {
       if (inc.status === 'resolved') continue;
       let services = [];
-      if (['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)) services = ['fire'];
+      if (inc.type === 'fire' || inc.type === 'arson') services = ['fire'];
       else if (inc.type === 'medical') services = ['ambulance'];
       else if (inc.type === 'clash' || inc.type === 'riot') services = ['police', 'ambulance'];
       else if (inc.type === 'accident') services = ['police', 'ambulance'];
@@ -524,17 +531,19 @@ class RepublicCityScene extends Phaser.Scene {
 
   _dispatchVehicle(order) {
     const key = order.service === 'fire' ? 'fire' : order.service === 'ambulance' ? 'ambulance' : order.service === 'military' ? 'military' : order.service === 'bus' ? 'bus' : 'police';
-    const slot = this.vehicles.length;
-    const laneY = 574 + (slot % 7) * 7 + WORLD_U.random(-1.5, 1.5);
-    const x = 1288 + Math.floor(slot / 7) * 17;
+    const slot = this.vehicles.filter(v => v.incidentId === order.incidentId && v.phase !== 'return').length;
+    const laneY = [554,566,608,620][this.vehicles.length % 4];
+    const x = 1320 + Math.floor(this.vehicles.length / 4) * 62;
+    const targetX = WORLD_U.clamp((order.x || 640) + ((slot % 5) - 2) * 28, 70, 1210);
+    const targetY = WORLD_U.clamp((order.y || 420) + (Math.floor(slot / 5) * 24), 280, 526);
     const sprite = this.add.image(x, laneY, `vehicle-${key}`).setOrigin(0.5, 0.5).setDepth(1000 + laneY);
     const unit = {
       id: order.id, service: key, sprite, x, y: laneY,
-      targetX: order.x, targetY: order.y, incidentId: order.incidentId,
-      purpose: order.purpose, phase: 'outbound', speed: key === 'military' ? 70 : key === 'bus' ? 64 : 102,
-      routeStage: 0, route: [{ x: 1130, y: 595 }, { x: 1010, y: 558 }, { x: order.x, y: order.y }],
-      target: { x: 1130, y: 595 }, sirenPhase: Math.random() * 7, age: 0,
-      arrived: false, returnTimer: 0
+      targetX, targetY, incidentId: order.incidentId,
+      purpose: order.purpose, phase: 'outbound', speed: key === 'military' ? 54 : key === 'bus' ? 42 : key === 'fire' ? 46 : 50,
+      routeStage: 0, route: [{ x: 1130, y: laneY }, { x: 1010, y: 548 + (this.vehicles.length % 4) * 5 }, { x: targetX, y: targetY }],
+      target: { x: 1130, y: laneY }, sirenPhase: Math.random() * 7, age: 0,
+      arrived: false, returnTimer: 0, dispatchSlot: slot, dispatchDelay: Math.floor(this.vehicles.length / 4) * 0.45
     };
     sprite.setScale(key === 'military' ? 1.18 : key === 'bus' ? 1.28 : 1.04);
     this.vehicles.push(unit);
@@ -741,11 +750,16 @@ class RepublicCityScene extends Phaser.Scene {
   }
 
   _updateVehicles(s, dt) {
+    // Spatial buckets keep separation close to O(n), even when dispatching many units at once.
+    const grid = new Map(), cell = 64;
+    for (const v of this.vehicles) { const k = `${Math.floor(v.x/cell)},${Math.floor(v.y/cell)}`; if(!grid.has(k)) grid.set(k,[]); grid.get(k).push(v); }
+    this._vehicleGrid = { grid, cell };
     for (let i = this.vehicles.length - 1; i >= 0; i--) {
       const v = this.vehicles[i];
       v.age += dt;
       v.sirenPhase += dt * 9;
       if (v.phase === 'outbound') {
+        if (v.dispatchDelay > 0) { v.dispatchDelay = Math.max(0, v.dispatchDelay - dt); v.sprite.setPosition(v.x,v.y).setDepth(v.y+25); continue; }
         const wp = v.route[Math.min(v.routeStage, v.route.length - 1)];
         if (wp) {
           v.target = wp;
@@ -760,7 +774,9 @@ class RepublicCityScene extends Phaser.Scene {
             }
           } else {
             const avoid = this._vehicleAvoidance(v);
-            const speed = Math.min(v.speed, d * 3.5);
+            let speed = Math.min(v.speed, d * 2.0);
+            const lead = this.vehicles.some(o => o !== v && o.phase === 'outbound' && Math.hypot(o.x-v.x,o.y-v.y)<36 && o.age < v.age);
+            if (lead) speed *= 0.38;
             v.x += (dx / d + avoid.x) * speed * dt;
             v.y += (dy / d + avoid.y) * speed * dt;
             v.sprite.setAngle(Math.atan2(dy, dx) * 180 / Math.PI);
@@ -793,12 +809,17 @@ class RepublicCityScene extends Phaser.Scene {
 
   _vehicleAvoidance(v) {
     let ax = 0, ay = 0;
-    for (const other of this.vehicles) {
-      if (other === v) continue;
-      const dx = v.x - other.x, dy = v.y - other.y, d2 = dx*dx + dy*dy;
-      if (d2 > 0 && d2 < 900) { const d = Math.sqrt(d2); ax += dx / d * 0.42; ay += dy / d * 0.42; }
+    const bucket = this._vehicleGrid, cell = bucket?.cell || 64;
+    const cx=Math.floor(v.x/cell), cy=Math.floor(v.y/cell);
+    for(let gx=cx-1;gx<=cx+1;gx++) for(let gy=cy-1;gy<=cy+1;gy++) {
+      const near=bucket?.grid.get(`${gx},${gy}`)||[];
+      for(const other of near) {
+        if (other === v) continue;
+        const dx = v.x - other.x, dy = v.y - other.y, d2 = dx*dx + dy*dy;
+        if (d2 > 0 && d2 < 2500) { const d = Math.sqrt(d2); const strength = (50-d)/50 * 1.8; ax += dx / d * strength; ay += dy / d * strength; }
+      }
     }
-    return { x: WORLD_U.clamp(ax, -0.8, 0.8), y: WORLD_U.clamp(ay, -0.8, 0.8) };
+    return { x: WORLD_U.clamp(ax, -1.2, 1.2), y: WORLD_U.clamp(ay, -1.2, 1.2) };
   }
 
   _renderEnvironment(s, time) {
@@ -815,35 +836,63 @@ class RepublicCityScene extends Phaser.Scene {
     }
     // Lamp halos become visible at dawn/night; the furniture remains static in the underlying scene.
     if (nightAlpha > 0.1) {
-      this.fx.fillStyle(0xf5d89c, nightAlpha * 0.14);
-      [[180,386],[1095,386],[335,450],[945,450]].forEach(([x,y]) => this.fx.fillCircle(x, y, 24));
+      this.fx.fillStyle(0xf5d89c, nightAlpha * 0.08);
+      [[180,386],[1095,386],[335,450],[945,450]].forEach(([x,y]) => this.fx.fillRect(x-12,y-18,24,3));
+    }
+    // Persistent per-incident visual age lets smoke remain after flames are extinguished.
+    this.fireVisualState = this.fireVisualState || Object.create(null);
+    const liveIds = new Set();
+    for (const inc of s.incidents) {
+      if (!['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)) continue;
+      const id = String(inc.id); liveIds.add(id);
+      const active = inc.status !== 'resolved' && (inc.fireIntensity ?? 0.6) > 0.025;
+      const fv = this.fireVisualState[id] || (this.fireVisualState[id] = { lastSeen: time, x: inc.x, y: inc.y, intensity: 0.7, fuel: inc.fuelType || 'mixed' });
+      fv.x = inc.x; fv.y = inc.y; if(active) fv.lastSeen = time; fv.intensity = active ? WORLD_U.clamp(inc.fireIntensity ?? 0.65,0,1.5) : Math.max(0,fv.intensity-(time-fv.lastDrawTime||0)*0.000025); fv.lastDrawTime=time;
+      const intensity = active ? WORLD_U.clamp(inc.fireIntensity ?? 0.65,0.15,1.5) : 0;
+      const x = inc.x, y = inc.y;
+      // Dark, irregular smoke plume, with slow sideways drift and layered semi-transparent polygonal lobes.
+      const smokeLife = active ? 1 : WORLD_U.clamp(1-(time-fv.lastSeen)/14000,0,1);
+      if (active || smokeLife > 0) {
+        const drift = Math.sin(time*0.00021 + x*.013)*12;
+        for (let j=0;j<7;j++) {
+          const age = (time*0.00022 + j*0.137 + x*.003) % 1;
+          const sx=x+drift+Math.sin(time*.00031+j*2.4+x)*7+(j%3-1)*8;
+          const sy=y-20-j*15-age*9;
+          const rx=8+j*2.2, ry=10+j*1.7;
+          this.fx.fillStyle(j%3===0?0x242b2b:0x333a39, (active?0.20:0.13)*smokeLife*(1-j*.065));
+          this.fx.beginPath(); this.fx.moveTo(sx-rx,sy+ry*.25); this.fx.lineTo(sx-rx*.72,sy-ry*.48); this.fx.lineTo(sx-rx*.22,sy-ry); this.fx.lineTo(sx+rx*.35,sy-ry*.82); this.fx.lineTo(sx+rx,sy-ry*.25); this.fx.lineTo(sx+rx*.78,sy+ry*.55); this.fx.lineTo(sx+rx*.12,sy+ry); this.fx.lineTo(sx-rx*.62,sy+ry*.78); this.fx.closePath(); this.fx.fillPath();
+        }
+      }
+      if (!active) continue;
+      // Irregular flame tongues, layered from deep red/orange to hot yellow-white cores; no flame icons or circles.
+      const flicker = 0.78 + Math.sin(time*.019+x*.07)*.13 + Math.sin(time*.031+y*.03)*.08;
+      const scale = (0.68 + intensity*.58) * flicker;
+      this.fx.fillStyle(0x54271e,0.28); this.fx.fillRect(x-25*scale,y-2,50*scale,5);
+      for (let j=0;j<5;j++) {
+        const fx=x+(j-2)*7+Math.sin(time*.014+j*1.9+x)*3;
+        const h=(20+(j%3)*9+Math.sin(time*.025+j*2+x)*5)*scale;
+        const w=(5+(j%2)*3)*scale;
+        this.fx.fillStyle(j%2?0xb63822:0xd94b24,0.92);
+        this.fx.beginPath(); this.fx.moveTo(fx-w,y); this.fx.lineTo(fx-w*1.05,y-h*.28); this.fx.lineTo(fx-w*.38,y-h*.62); this.fx.lineTo(fx+Math.sin(time*.02+j)*w*.45,y-h); this.fx.lineTo(fx+w*.36,y-h*.70); this.fx.lineTo(fx+w*1.1,y-h*.38); this.fx.lineTo(fx+w,y); this.fx.closePath(); this.fx.fillPath();
+        this.fx.fillStyle(j%2?0xff9b35:0xffc45a,0.92);
+        this.fx.beginPath(); this.fx.moveTo(fx-w*.46,y-1); this.fx.lineTo(fx-w*.4,y-h*.28); this.fx.lineTo(fx+Math.sin(time*.026+j)*w*.25,y-h*.72); this.fx.lineTo(fx+w*.42,y-h*.32); this.fx.lineTo(fx+w*.45,y-1); this.fx.closePath(); this.fx.fillPath();
+      }
+      this.fx.fillStyle(0xffdf8a,0.84); this.fx.beginPath(); this.fx.moveTo(x-4*scale,y); this.fx.lineTo(x-2*scale,y-9*scale); this.fx.lineTo(x+1*scale,y-15*scale); this.fx.lineTo(x+4*scale,y-6*scale); this.fx.lineTo(x+4*scale,y); this.fx.closePath(); this.fx.fillPath();
+    }
+    // Keep the last smoke plume for a short time even if the incident was resolved and removed from active logic.
+    for (const [id,fv] of Object.entries(this.fireVisualState)) {
+      if (liveIds.has(id)) continue;
+      const life=WORLD_U.clamp(1-(time-fv.lastSeen)/14000,0,1); if(life<=0){delete this.fireVisualState[id];continue;}
+      const x=fv.x+Math.sin(time*.0002+fv.x*.01)*8,y=fv.y;
+      for(let j=0;j<6;j++){const sx=x+Math.sin(time*.00018+j*2.1)*10+(j%3-1)*7,sy=y-18-j*14-(time*.004%12),rx=9+j*2,ry=10+j*2;this.fx.fillStyle(0x303837,0.12*life*(1-j*.08));this.fx.beginPath();this.fx.moveTo(sx-rx,sy);this.fx.lineTo(sx-rx*.6,sy-ry);this.fx.lineTo(sx+rx*.25,sy-ry*.9);this.fx.lineTo(sx+rx,sy-ry*.2);this.fx.lineTo(sx+rx*.6,sy+ry*.7);this.fx.lineTo(sx-rx*.45,sy+ry);this.fx.closePath();this.fx.fillPath();}
     }
     for (const inc of s.incidents) {
-      if (inc.status === 'resolved') continue;
-      if (['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)) {
-        const pulse = 0.72 + Math.sin(time * 0.012 + inc.x) * 0.18;
-        this.fx.fillStyle(0x3a3027, 0.11); this.fx.fillEllipse(inc.x, inc.y + 1, 57 + pulse * 10, 17);
-        this.fx.fillStyle(0xe36a32, 0.12); this.fx.fillEllipse(inc.x, inc.y - 5, 35 + pulse * 5, 13);
-        for (let j = 0; j < 5; j++) {
-          const wobble = Math.sin(time * 0.009 + j * 2.1 + inc.id.length) * 6;
-          const rise = (time * 0.018 + j * 9) % 21;
-          this.fx.fillStyle(j % 2 ? 0xffc66e : 0xed7041, 0.72 - rise * 0.018);
-          this.fx.fillTriangle(inc.x + wobble - 5, inc.y - rise - 2, inc.x + wobble + 6, inc.y - rise - 2, inc.x + wobble, inc.y - rise - 15);
-        }
-        this.fx.fillStyle(0x5b6460, 0.17); this.fx.fillCircle(inc.x - 6, inc.y - 34 - (time % 150) * 0.06, 9);
-      } else if (inc.type === 'clash' || inc.type === 'riot') {
-        const flicker = 0.62 + Math.sin(time * 0.018 + inc.x) * 0.18;
-        this.fx.lineStyle(2, 0xd56a5d, flicker); this.fx.beginPath(); this.fx.moveTo(inc.x-7,inc.y-4); this.fx.lineTo(inc.x-2,inc.y+2); this.fx.moveTo(inc.x+6,inc.y-5); this.fx.lineTo(inc.x+1,inc.y+2); this.fx.strokePath();
-        this.fx.fillStyle(0xd56a5d, 0.22); this.fx.fillEllipse(inc.x, inc.y+3, 13, 5);
-      } else if (inc.type === 'blockade') {
-        const pulse = 0.40 + Math.sin(time*0.009)*0.16;
-        this.fx.fillStyle(0xc9564b, pulse); this.fx.fillRect(inc.x-54, inc.y-4, 108, 8);
-        this.fx.lineStyle(2,0xe3b66f,.7); this.fx.strokeRect(inc.x-47,inc.y-9,94,18);
-      } else if (inc.type === 'medical') {
-        this.fx.lineStyle(2, 0x8cc2b7, 0.62); this.fx.beginPath(); this.fx.moveTo(inc.x-6,inc.y); this.fx.lineTo(inc.x+6,inc.y); this.fx.moveTo(inc.x,inc.y-6); this.fx.lineTo(inc.x,inc.y+6); this.fx.strokePath();
-      } else if (inc.type === 'accident') {
-        this.fx.lineStyle(2, 0xd0b16d, 0.55); this.fx.beginPath(); this.fx.moveTo(inc.x-7,inc.y-5); this.fx.lineTo(inc.x+7,inc.y+5); this.fx.moveTo(inc.x+7,inc.y-5); this.fx.lineTo(inc.x-7,inc.y+5); this.fx.strokePath();
-      }
+      if (inc.status==='resolved' || ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)) continue;
+      // Non-fire incidents use restrained cross/line glyphs rather than circles or colored rings.
+      if (inc.type==='clash'||inc.type==='riot') { this.fx.lineStyle(2,0xb87568,.55);this.fx.beginPath();this.fx.moveTo(inc.x-5,inc.y-5);this.fx.lineTo(inc.x+5,inc.y+5);this.fx.moveTo(inc.x+5,inc.y-5);this.fx.lineTo(inc.x-5,inc.y+5);this.fx.strokePath(); }
+      else if(inc.type==='blockade'){this.fx.fillStyle(0x7c443d,.45);this.fx.fillRect(inc.x-46,inc.y-3,92,6);this.fx.lineStyle(1,0xbda16c,.5);this.fx.beginPath();this.fx.moveTo(inc.x-42,inc.y-7);this.fx.lineTo(inc.x-42,inc.y+7);this.fx.moveTo(inc.x+42,inc.y-7);this.fx.lineTo(inc.x+42,inc.y+7);this.fx.strokePath();}
+      else if(inc.type==='medical'){this.fx.lineStyle(2,0x8cc2b7,.62);this.fx.beginPath();this.fx.moveTo(inc.x-6,inc.y);this.fx.lineTo(inc.x+6,inc.y);this.fx.moveTo(inc.x,inc.y-6);this.fx.lineTo(inc.x,inc.y+6);this.fx.strokePath();}
+      else if(inc.type==='accident'){this.fx.lineStyle(2,0xd0b16d,.55);this.fx.beginPath();this.fx.moveTo(inc.x-6,inc.y-4);this.fx.lineTo(inc.x+6,inc.y+4);this.fx.moveTo(inc.x+6,inc.y-4);this.fx.lineTo(inc.x-6,inc.y+4);this.fx.strokePath();}
     }
     this.interactionMarks = this.interactionMarks.filter(mark => mark.expires > time);
     for (const mark of this.interactionMarks) {
@@ -857,12 +906,12 @@ class RepublicCityScene extends Phaser.Scene {
         this.fx.lineStyle(1.5, mark.type === 'throw' ? 0xd5b778 : 0xef8b50, remaining * 0.7);
         this.fx.beginPath(); this.fx.moveTo(mark.x-4,mark.y-7); this.fx.lineTo(mark.x+4,mark.y-7); this.fx.strokePath();
         if (mark.type === 'throw-impact') {
-          this.fx.fillStyle(0xf1a05a, remaining * 0.45); this.fx.fillCircle(mark.x, mark.y - 4, 9 * remaining + 2);
+          this.fx.fillStyle(0xf1a05a, remaining * 0.35); this.fx.fillRect(mark.x-5*remaining,mark.y-6,10*remaining,3);
         }
       } else if (mark.type === 'police-fire') {
         const flicker = 0.65 + Math.sin(time * 0.026 + mark.x) * 0.2;
-        this.fx.fillStyle(0xe85d31, remaining * flicker); this.fx.fillCircle(mark.x, mark.y - 8, 7 + (1 - remaining) * 5);
-        this.fx.fillStyle(0xffc16d, remaining * 0.88); this.fx.fillTriangle(mark.x - 5, mark.y - 6, mark.x, mark.y - 18 - flicker * 5, mark.x + 5, mark.y - 6);
+        this.fx.fillStyle(0xe85d31, remaining * flicker); this.fx.fillTriangle(mark.x-6,mark.y-3,mark.x+3,mark.y-4,mark.x+1,mark.y-17);
+        this.fx.fillStyle(0xffc16d, remaining * 0.88); this.fx.fillTriangle(mark.x-3,mark.y-5,mark.x+4,mark.y-4,mark.x+1,mark.y-14-flicker*5);
       } else {
         this.fx.lineStyle(1.5, 0xd47768, remaining * 0.75);
         this.fx.beginPath(); this.fx.moveTo(mark.x-6,mark.y-7); this.fx.lineTo(mark.x+6,mark.y-7); this.fx.strokePath();
@@ -875,8 +924,8 @@ class RepublicCityScene extends Phaser.Scene {
       const t = WORLD_U.clamp(p.elapsed / p.duration, 0, 1);
       this.fx.lineStyle(2, p.kind === 'firebrand' ? 0xe36c3f : 0xd5bb75, 0.5);
       this.fx.beginPath(); this.fx.moveTo(p.startX, p.startY - 3); this.fx.lineTo(p.x, p.y); this.fx.strokePath();
-      this.fx.fillStyle(p.kind === 'firebrand' ? 0xf16a3e : 0xe7d091, 0.2); this.fx.fillCircle(p.x, p.y, p.kind === 'firebrand' ? 10 : 6);
-      this.fx.fillStyle(p.kind === 'firebrand' ? 0xffb35f : 0xf5ead0, 0.95); this.fx.fillCircle(p.x, p.y, p.kind === 'firebrand' ? 3.2 : 2.2);
+      this.fx.fillStyle(p.kind === 'firebrand' ? 0xf16a3e : 0xe7d091, 0.2); this.fx.fillRect(p.x-4,p.y-4,8,8);
+      this.fx.fillStyle(p.kind === 'firebrand' ? 0xffb35f : 0xf5ead0, 0.95); this.fx.fillRect(p.x-1.5,p.y-2,3,4);
     }
     // Congestion markers and vehicle reflections remain live even when the policy clock is paused.
     if (s.roadBlockage > 0.38) {
@@ -884,7 +933,7 @@ class RepublicCityScene extends Phaser.Scene {
       this.fx.lineStyle(2,0xd5b16b,0.18+s.roadBlockage*0.24); this.fx.beginPath(); this.fx.moveTo(500,545); this.fx.lineTo(786,545); this.fx.strokePath();
     }
     for (const car of this.trafficCars) {
-      if (car.speed > 18) { this.fx.fillStyle(0xe2d3a3,0.12); this.fx.fillCircle(car.x+(car.direction>0?-12:12),car.y-2,2); }
+      if (car.speed > 18) { this.fx.fillStyle(0xe2d3a3,0.12); this.fx.fillRect(car.x+(car.direction>0?-15:12),car.y-3,3,1); }
       if (this.sim.state.weather.id === 'rain' || this.sim.state.weather.id === 'storm') { this.fx.fillStyle(0xb8c5c3,0.08); this.fx.fillRect(car.x-13,car.y+6,26,2); }
     }
     // Emergency light reflections blink on vehicles and wet stone.
@@ -892,7 +941,7 @@ class RepublicCityScene extends Phaser.Scene {
       const burningUntil = officer.getData ? (officer.getData('burningUntil') || 0) : 0;
       if (burningUntil > this.currentTime) {
         const flame = 0.68 + Math.sin(time * 0.035 + officer.x * 0.04) * 0.2;
-        this.fx.fillStyle(0xee713c, flame); this.fx.fillCircle(officer.x, officer.y - 12, 5.5);
+        this.fx.fillStyle(0xee713c, flame); this.fx.fillTriangle(officer.x-4,officer.y-7,officer.x+4,officer.y-7,officer.x,officer.y-19);
         this.fx.fillStyle(0xffc66a, flame * 0.9); this.fx.fillTriangle(officer.x - 3.5, officer.y - 10, officer.x, officer.y - 20, officer.x + 3.5, officer.y - 10);
       }
     }
@@ -901,11 +950,11 @@ class RepublicCityScene extends Phaser.Scene {
       const flash = Math.sin(v.sirenPhase) > 0;
       const c1 = v.service === 'fire' ? 0xf0a85e : 0xd9534f;
       this.fx.fillStyle(flash ? c1 : 0x4e9dd0, nightAlpha > 0.07 ? 0.48 : 0.75);
-      this.fx.fillCircle(v.x - 3, v.y - 3, 3.2);
+      this.fx.fillRect(v.x-6,v.y-5,5,2.5);
       this.fx.fillStyle(flash ? 0x4d9acb : c1, nightAlpha > 0.07 ? 0.48 : 0.75);
-      this.fx.fillCircle(v.x + 3, v.y - 3, 3.2);
+      this.fx.fillRect(v.x+1,v.y-5,5,2.5);
       if (nightAlpha > 0.08 && flash) {
-        this.fx.fillStyle(c1, 0.055); this.fx.fillCircle(v.x, v.y, 23);
+        this.fx.fillStyle(c1, 0.055); this.fx.fillRect(v.x-13,v.y-1,26,2);
       }
     }
     if (s.weather.id === 'rain' || s.weather.id === 'storm') {

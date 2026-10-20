@@ -303,8 +303,7 @@
   SP._updateFirePhysics = function() {
     const s = this.state;
     const weather = s.weather || { id:'clear', temperature:18 };
-    const fireIncidentTypes = ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'];
-    const activeFires = s.incidents.filter(i => alive(i) && fireIncidentTypes.includes(i.type));
+    const activeFires = s.incidents.filter(i => alive(i) && ['fire','arson'].includes(i.type));
     for (const inc of activeFires) {
       const weatherFactor = weather.id === 'rain' || weather.id === 'storm' ? 0.48 : weather.id === 'heat' || (weather.temperature || 18) > 29 ? 1.35 : 1;
       const windFactor = weather.id === 'storm' ? 1.32 : (s.windSpeed || 0) > 45 ? 1.2 : 1;
@@ -361,7 +360,7 @@
       if (inc.spreadCooldown > 0) inc.spreadCooldown -= 1;
       s.pollution = clamp(s.pollution + 0.16 * inc.fireIntensity, 0, 100);
     }
-    s.fireZones = s.fireZones.filter(z => activeFires.some(i => i.id === z.id) || (z.condition === 'Потушено' && (z.smokeLife || 0) > 0));
+    s.fireZones = s.fireZones.filter(z => activeFires.some(i => i.id === z.id));
     // A structure stops burning after every nearby active source is contained; repairs can then begin.
     for (const asset of s.assets) {
       if (asset.condition === 'Горит') {
@@ -1003,7 +1002,7 @@
     inc.createdAt=Number.isFinite(inc.createdAt)?inc.createdAt:(s.hoursElapsed||0);
     inc.serviceProgress=inc.serviceProgress||{};
     if(inc.geometryRisk) inc.severity=clamp(inc.severity*inc.geometryRisk,1,100);
-    if(['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)) {
+    if(['fire','arson'].includes(inc.type)) {
       inc.fireArea=inc.fireArea||irnd(5,12); inc.fireIntensity=inc.fireIntensity||clamp(inc.severity/100,0.35,1.2); inc.fireRadius=inc.fireRadius||18; inc.smokeRadius=inc.smokeRadius||26;
       if(!s.fireZones.some(z=>z.id===inc.id)) s.fireZones.unshift({id:inc.id,x:inc.x,y:inc.y,area:inc.fireArea,radius:inc.fireRadius,smokeRadius:inc.smokeRadius,intensity:inc.fireIntensity,source:inc.type,condition:'Горит',at:inc.createdAt});
     }
@@ -1019,7 +1018,7 @@
       s.phaseCode='clashes'; s.lastFlashpointAt=s.hoursElapsed||0;
     }
     // Dispatch reports precede newspaper headlines by design.
-    const channel = ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)?'Пожарные':inc.type==='medical'||inc.type==='crush'?'Медики':'Диспетчерская';
+    const channel = ['fire','arson'].includes(inc.type)?'Пожарные':inc.type==='medical'||inc.type==='crush'?'Медики':'Диспетчерская';
     this._radio(channel,'Оперативный дежурный',`Зарегистрировано событие ${inc.id}: ${inc.label}. Координаты переданы ближайшим службам; движение пересчитывается.`,inc.level==='critical'?'critical':'warning',inc.source||'random',inc.id);
     // The incident itself triggers an immediate AI doctrine review; force and fatigue still advance on model hours.
     if (!this._doctrineEventReview && typeof this._updatePoliceDoctrine === 'function') {
@@ -1071,7 +1070,7 @@
     const before=inc&&inc.status!=='resolved';
     original.resolveIncident.call(this,id,note);
     if(before && inc) {
-      if(['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type)) {
+      if(['fire','arson'].includes(inc.type)) {
         const z=this.state.fireZones.find(x=>x.id===inc.id); if(z) z.condition='Потушено';
         this._radio('Пожарные','Начальник расчёта',`${inc.label}: активное горение локализовано; проводится проливка и проверка соседних объектов.`,'good','fire',id);
       }
@@ -1512,67 +1511,19 @@
     original._renderEnvironment.call(this,s,time);
     const g=this.fx; if(!g) return;
     // Larger fire areas, drifting smoke, damaged building and barricade silhouettes.
-    const visibleFireZones=(s.fireZones||[]).slice();
-    // A new incident gets a visual fire immediately; it need not wait for the hourly physics pass.
-    for(const inc of (s.incidents||[])){
-      if(inc.status==='resolved'||!['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(inc.type))continue;
-      if(!visibleFireZones.some(z=>z.id===inc.id))visibleFireZones.push({id:inc.id,x:inc.x||640,y:inc.y||420,radius:inc.fireRadius||24,smokeRadius:inc.smokeRadius||58,intensity:inc.fireIntensity||.75,condition:'Горит',windDrift:inc.windDrift||0});
-    }
-    visibleFireZones.forEach(z=>{
-      const x=Number(z.x)||0,y=Number(z.y)||0;
-      const smokeRadius=clamp(z.smokeRadius||Math.max(48,(z.radius||20)*2.6),36,230);
-      const wind=Number(z.windDrift)||0;
-      const extinguished=z.condition==='Потушено';
-      const smokeLife=extinguished?clamp((z.smokeLife||0)/20,0,1):1;
-      if(smokeLife>0){
-        // A low-opacity smoke bed and large, distinct lobes make the smoke readable against rooftops.
-        g.fillStyle(0x24292a,extinguished?.13:.19);g.fillEllipse(x+wind,y-smokeRadius*.30,smokeRadius*1.72,smokeRadius*.68);
-        g.fillStyle(0x414846,extinguished?.11:.16);g.fillEllipse(x+wind*.7,y-smokeRadius*.55,smokeRadius*1.24,smokeRadius*.66);
-        const puffs=extinguished?6:8;
-        for(let k=0;k<puffs;k++){
-          const cycle=smokeRadius+82;
-          const phase=((time*.016+k*17)%cycle)/cycle;
-          const rise=phase*cycle;
-          const drift=Math.sin(time*.0012+k*2.2+x*.005)*smokeRadius*.22;
-          const px=x+wind*phase+drift;
-          const py=y-12-rise;
-          const pw=14+phase*37+(k%3)*3;
-          const ph=12+phase*25+(k%2)*4;
-          const fade=(1-phase)*smokeLife;
-          g.fillStyle(0x343a39,Math.min(.28,(extinguished?.20:.29)*fade));g.fillEllipse(px,py,pw*1.45,ph*1.35);
-          g.fillStyle(0x626a66,Math.min(.24,(extinguished?.16:.22)*fade));g.fillEllipse(px-3,py-3,pw,ph);
-          g.fillStyle(0x828783,Math.min(.14,.12*fade));g.fillEllipse(px+4,py-5,pw*.58,ph*.72);
-        }
+    (s.fireZones||[]).forEach(z=>{
+      if(z.condition==='Потушено'){const left=clamp((z.smokeLife||0)/20,0,1);if(left>0){const smoke=Math.max(18,z.smokeRadius||32);g.fillStyle(0x353d3d,.09*left);g.fillEllipse((z.x||0)+(z.windDrift||0),(z.y||0)-smoke*.4,smoke*2.1,smoke*.85);for(let k=0;k<3;k++){const up=(time*.006+k*12)%(smoke+18);g.fillStyle(0x4b5251,.045*left);g.fillEllipse((z.x||0)+Math.sin(time*.001+k)*smoke*.2,(z.y||0)-up-10,9+up*.25,7+up*.2);}}return;}
+      const pulse=.65+Math.sin(time*.013+(z.x||0))*.16;
+      const radius=Math.max(12,z.radius||18), smoke=Math.max(radius,z.smokeRadius||32);
+      g.fillStyle(0x292f31,0.045);g.fillEllipse((z.x||0)+(z.windDrift||0), (z.y||0)-smoke*.22,smoke*2.15,smoke*1.05);
+      for(let k=0;k<4;k++) {
+        const drift=Math.sin(time*.0015+k*2.1+(z.x||0))*(smoke*.24);
+        const up=(time*.012+k*15)%(smoke+28);
+        g.fillStyle(0x454c4b,Math.max(.02,.12-up/(smoke+28)*.08));g.fillCircle((z.x||0)+(z.windDrift||0)+drift,(z.y||0)-up-14,8+up*.20);
       }
-      if(extinguished)return;
-      const intensity=clamp(z.intensity||.75,.25,1.5);
-      const radius=clamp(z.radius||20,12,130);
-      const flameHeight=clamp(radius*(1.42+intensity*.30),32,102);
-      const baseWidth=clamp(radius*1.22,24,84);
-      const flicker=.82+Math.sin(time*.018+x*.07)*.14;
-      // A dark ember base is an anchor for the flame tongues—not an incident marker or ring.
-      g.fillStyle(0x251a17,.38);g.fillEllipse(x,y+5,baseWidth*1.58,Math.max(7,radius*.31));
-      g.fillStyle(0xb93822,.42);g.fillEllipse(x,y+2,baseWidth*1.17,Math.max(8,radius*.30));
-      const tongues=clamp(Math.round(radius/5)+3,6,15);
-      for(let i=0;i<tongues;i++){
-        const spread=((i/(tongues-1))-.5)*baseWidth;
-        const wave=Math.sin(time*.021+i*2.35+x*.013)*baseWidth*.11;
-        const h=flameHeight*(.48+((Math.sin(time*.017+i*1.73)+1)/2)*.52)*flicker;
-        const w=clamp(baseWidth/(tongues*.42),5,16)*(i%3===0?1.18:1);
-        const bx=x+spread+wave, by=y+5;
-        // Outer red-orange tongue, orange body and yellow-hot core read as continuous flames.
-        g.fillStyle(i%3===0?0xb72d1d:0xe34c24,.88);
-        g.fillTriangle(bx-w,by,bx+w,by,bx+wave*.24,by-h);
-        g.fillStyle(i%2===0?0xff782c:0xffa13a,.93);
-        g.fillTriangle(bx-w*.66,by-1,bx+w*.66,by-1,bx+wave*.22,by-h*.78);
-        g.fillStyle(0xffd15c,.93);
-        g.fillTriangle(bx-w*.30,by-2,bx+w*.30,by-2,bx+wave*.18,by-h*.48);
-      }
-      // One larger central tongue gives roofs, vehicle fires and camp fires a distinct silhouette.
-      const centralW=clamp(baseWidth*.18,6,17), centralH=flameHeight*(.72+.20*Math.sin(time*.022+x));
-      g.fillStyle(0xff4f22,.96);g.fillTriangle(x-centralW*1.7,y+5,x+centralW*1.7,y+5,x+Math.sin(time*.016)*4,y-centralH);
-      g.fillStyle(0xffb43f,.98);g.fillTriangle(x-centralW*.9,y+3,x+centralW*.9,y+3,x+Math.sin(time*.016)*2,y-centralH*.68);
-      g.fillStyle(0xffe58a,.94);g.fillTriangle(x-centralW*.35,y+1,x+centralW*.35,y+1,x,y-centralH*.38);
+      g.fillStyle(0xef8039,.075+pulse*.045);g.fillEllipse(z.x,z.y+1,radius*3.25,radius*.78);
+      g.fillStyle(0xdf6334,.14+pulse*.07);g.fillEllipse(z.x,z.y,radius*1.7,radius*.46);
+      for(let i=0;i<5;i++){const fx=z.x+Math.sin(time*.009+i*2.5)*radius*.25;const fy=z.y-(time*.014+i*8)%(radius+26);g.fillStyle(i%2?0xffbc65:0xe35e32,.55);g.fillTriangle(fx-4,fy,fx+4,fy,fx,fy-10);}
     });
     (s.gasZones||[]).forEach(z=>{
       const radius=z.radius||90;const a=clamp((z.life||0)/3,.02,.22);
@@ -1719,7 +1670,7 @@
     original.updateStats.call(this);
     const s=this.sim.state;
     const pm=document.getElementById('prime-minister-name');if(pm)pm.textContent=s.primeMinister||'Ирина Волкова';
-    const ver=document.querySelector('.app-footer span');if(ver)ver.textContent='КОНТУР // ВЕРСИЯ 8.0.0';
+    const ver=document.querySelector('.app-footer span');if(ver)ver.textContent='КОНТУР // ВЕРСИЯ 9.0.0';
     const mode=document.getElementById('state-mode');if(mode) {mode.textContent=s.stateMode||'Обычное управление';mode.className=`state-mode ${s.stateModeCode||'normal'}`;}
     const active=(s.districts||[]).find(d=>d.id===(s.activeDistrict||'center'));
     const subtitle=document.getElementById('world-subtitle');if(subtitle&&active)subtitle.textContent=`Камера мониторинга: ${active.name} · напряжённость ${Math.round(active.tension)}% · загрузка дорог ${Math.round(active.blockage*100)}%`;

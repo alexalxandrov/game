@@ -109,7 +109,7 @@
       { x:555,y:468,radius:25,name:'Лагерь волонтёров' }, { x:850,y:525,radius:28,name:'Лагерь у остановки' },
       { x:355,y:511,radius:27,name:'Запасной палаточный лагерь' }, { x:970,y:516,radius:26,name:'Лагерь у внешней дороги' }
     ];
-    const activeFireFronts=(s.incidents||[]).filter(i=>alive(i)&&['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type));
+    const activeFireFronts=(s.incidents||[]).filter(i=>alive(i)&&['fire','arson'].includes(i.type));
     const eligible = sites.filter(p => (s.campSites || []).every(c => Math.hypot(c.x-p.x,c.y-p.y) > (c.radius || 30)+p.radius+26) && Math.hypot(640-p.x,285-p.y)>110 && activeFireFronts.every(i=>Math.hypot((i.x||640)-p.x,(i.y||420)-p.y)>(i.fireRadius||24)+p.radius+12));
     if (!eligible.length) return;
     const site = choose(eligible);
@@ -177,7 +177,7 @@
     const s = this.state;
     if (!b || b.burning || ['cleared','burned'].includes(b.status)) return false;
     b.burning = true; b.condition = 'Горит'; b.fireStartedAt = Number(s.hoursElapsed || 0); b.ignitionCause = cause; b.health = Math.min(Number(b.health || 70), 58);
-    let inc = (s.incidents || []).find(i => alive(i) && ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type) && Math.hypot(i.x-b.x,i.y-b.y) < 62);
+    let inc = (s.incidents || []).find(i => alive(i) && ['fire','arson'].includes(i.type) && Math.hypot(i.x-b.x,i.y-b.y) < 62);
     if (!inc && (s.incidents || []).filter(alive).length < this.config.maxIncidents) {
       inc = this.addIncident('fire');
       if (inc) { inc.x = b.x; inc.y = b.y-2; inc.fireArea = 14; inc.fireIntensity = 0.85; inc.fireRadius = 24; inc.smokeRadius = 58; inc.label = 'Горящая баррикада'; inc.districtId = 'center'; inc.locationType = 'площадь'; }
@@ -199,7 +199,7 @@
     const s=this.state;
     if(!asset || asset.condition==='Разрушен' || Number(asset.integrity||0)<=0) return null;
     asset.condition='Горит'; asset.ignitionCause=cause; asset.lastIgnitionAt=Number(s.hoursElapsed||0);
-    let inc=(s.incidents||[]).find(i=>alive(i)&&['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type)&&Math.hypot((i.x||640)-asset.x,(i.y||420)-asset.y)<Math.max(i.fireRadius||18,(asset.radius||20)+20));
+    let inc=(s.incidents||[]).find(i=>alive(i)&&['fire','arson'].includes(i.type)&&Math.hypot((i.x||640)-asset.x,(i.y||420)-asset.y)<Math.max(i.fireRadius||18,(asset.radius||20)+20));
     if(!inc && (s.incidents||[]).filter(alive).length<this.config.maxIncidents){
       inc=this.addIncident('fire');
       if(inc){inc.x=asset.x;inc.y=asset.y;inc.fireArea=14;inc.fireIntensity=.85;inc.fireRadius=Math.max(24,(asset.radius||20)+10);inc.smokeRadius=Math.max(56,(asset.radius||20)*2.4);inc.label=`Пожар: ${asset.name||'объект площади'}`;inc.districtId='center';inc.locationType='площадь';inc.ignitionCause=cause;}
@@ -220,7 +220,7 @@
     const now = Number(s.hoursElapsed || 0);
     const active = (s.incidents || []).filter(alive);
     const violent = active.filter(i => ['riot','clash','looting','building_assault','radical_attack','arson','special_vehicle_attack','traffic_crash','fire'].includes(i.type));
-    const activeFire = (s.fireZones || []).some(z => z.condition !== 'Выжжен') || active.some(i => ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type));
+    const activeFire = (s.fireZones || []).some(z => z.condition !== 'Выжжен') || active.some(i => ['fire','arson'].includes(i.type));
     const anger = clamp(s.crowdAnger || 0, 0, 1000);
     const siege = Number(s.building?.siege || 0);
     const trueBuildingThreat = siege > 68 || Number(s.building?.integrity ?? 100) < 16 || (s.building?.occupation && siege > 30);
@@ -504,7 +504,7 @@
         else if (s.building.integrity < 35) s.building.status = 'Сильно повреждено';
         else if (s.building.integrity < 75) s.building.status = 'Повреждено';
         // If the legacy hit created an incident, upgrade it with precise position and a visible fire/smoke zone immediately.
-        let inc=(s.incidents||[]).find(i=>alive(i)&&['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type)&&Math.hypot((i.x||640)-px,(i.y||235)-py)<100);
+        let inc=(s.incidents||[]).find(i=>alive(i)&&['fire','arson'].includes(i.type)&&Math.hypot((i.x||640)-px,(i.y||235)-py)<100);
         if (!inc && (s.incidents||[]).filter(alive).length < this.sim.config.maxIncidents) {
           inc = this.sim.addIncident('arson');
           if (inc) { inc.x=px;inc.y=py;inc.fireArea=16;inc.fireIntensity=1.1;inc.fireRadius=28;inc.smokeRadius=62;inc.label='Зажигательный инцидент у фасада';inc.ignitionCause='попадание абстрактного зажигательного токена'; }
@@ -525,7 +525,7 @@
         if(v.phase){v.phase='disabled';v.stoppedAt={x:v.x,y:v.y};}
         if(v.vehicleRecordId){const rec=(s.roadVehicles||[]).find(r=>r.id===v.vehicleRecordId);if(rec){rec.condition='Горит';rec.driverState='покидает машину';rec.fire=1;rec.x=v.x;rec.y=v.y;}}
         const serviceRec=(s.serviceFleet||[]).find(r=>r.id===v.id);if(serviceRec){serviceRec.condition='Горит';serviceRec.driverState='покидает машину';serviceRec.disabled=true;serviceRec.phase='disabled';}
-        let inc=(s.incidents||[]).find(i=>alive(i)&&['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type)&&Math.hypot((i.x||0)-v.x,(i.y||0)-v.y)<35);
+        let inc=(s.incidents||[]).find(i=>alive(i)&&['fire','arson'].includes(i.type)&&Math.hypot((i.x||0)-v.x,(i.y||0)-v.y)<35);
         if(!inc && (s.incidents||[]).filter(alive).length<this.sim.config.maxIncidents) inc=this.sim.addIncident('fire');
         if(inc){inc.x=v.x;inc.y=v.y;inc.fireArea=Math.max(12,inc.fireArea||0);inc.fireIntensity=Math.max(.8,inc.fireIntensity||0);inc.fireRadius=Math.max(24,inc.fireRadius||0);inc.smokeRadius=Math.max(58,inc.smokeRadius||0);inc.label='Горящий транспорт';inc.districtId='center';inc.locationType='площадь';inc.ignitionCause='попадание абстрактного зажигательного токена';s.fireZones=s.fireZones||[];const z={id:inc.id,x:inc.x,y:inc.y,area:inc.fireArea,radius:inc.fireRadius,smokeRadius:inc.smokeRadius,intensity:inc.fireIntensity,windDrift:(s.windDirection||1)*9,source:'vehicle',sourceVehicleId:v.vehicleRecordId||v.id||null,condition:'Горит',at:inc.createdAt};const zi=s.fireZones.findIndex(q=>q.id===z.id);if(zi>=0)Object.assign(s.fireZones[zi],z);else s.fireZones.unshift(z);}
         this.sim._radio?.('Пожарные','Диспетчерская','Зажигательный токен попал в транспорт. Машина остановлена, экипаж/водитель покидает опасную зону, видимый очаг передан пожарным.','critical','fire',inc?.id||null);
@@ -809,12 +809,12 @@
   const priorFirePhysics = SP._updateFirePhysics;
   SP._updateFirePhysics = function() {
     const stateBefore=this.state;
-    const burningAssetsBefore=(stateBefore?.assets||[]).filter(a=>a && a.condition==='Горит' && Number(a.integrity||0)>0).map(a=>({asset:a, hasLiveCause:(stateBefore.incidents||[]).some(i=>alive(i)&&['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type)&&(i.id===a.fireIncidentId || Math.hypot((i.x||0)-a.x,(i.y||0)-a.y)<(i.fireRadius||22)+(a.radius||18)))}));
+    const burningAssetsBefore=(stateBefore?.assets||[]).filter(a=>a && a.condition==='Горит' && Number(a.integrity||0)>0).map(a=>({asset:a, hasLiveCause:(stateBefore.incidents||[]).some(i=>alive(i)&&['fire','arson'].includes(i.type)&&(i.id===a.fireIncidentId || Math.hypot((i.x||0)-a.x,(i.y||0)-a.y)<(i.fireRadius||22)+(a.radius||18)))}));
     if (priorFirePhysics) priorFirePhysics.call(this);
     const s=this.state;
     if (!s) return;
     const now=Number(s.hoursElapsed||0);
-    const fires=(s.incidents||[]).filter(i=>alive(i)&&['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type));
+    const fires=(s.incidents||[]).filter(i=>alive(i)&&['fire','arson'].includes(i.type));
     s.fireZones=s.fireZones||[];
     const activeFireIds=new Set(fires.map(i=>i.id));
     // A standalone ignition without an available incident still remains a real fire source. If an incident was resolved, allow its asset to leave the burning state.
@@ -824,7 +824,7 @@
       if(!item.hasLiveCause && !hasCauseNow && Number(a.integrity||0)>0) a.condition='Горит';
     }
     // The legacy fire system prunes to incident IDs. Keep separately keyed camp/asset/barrier sources as long as the object is burning.
-    s.fireZones=s.fireZones.filter(z=>(z.condition==='Потушено' && (Number(z.smokeLife)||0)>0) || activeFireIds.has(z.id) || (z.source==='camp' && (s.campSites||[]).some(c=>`CAMP-${c.id}`===z.id&&onFire(c))) || (z.source==='barricade' && (s.barricades||[]).some(b=>b.fireZoneId===z.id&&b.burning)) || (z.source==='asset' && (s.assets||[]).some(a=>a.fireZoneId===z.id&&a.condition==='Горит')) || (String(z.id||'').startsWith('ASSET-FIRE-') && (s.assets||[]).some(a=>a.fireZoneId===z.id&&a.condition==='Горит')));
+    s.fireZones=s.fireZones.filter(z=>activeFireIds.has(z.id) || (z.source==='camp' && (s.campSites||[]).some(c=>`CAMP-${c.id}`===z.id&&onFire(c))) || (z.source==='barricade' && (s.barricades||[]).some(b=>b.fireZoneId===z.id&&b.burning)) || (z.source==='asset' && (s.assets||[]).some(a=>a.fireZoneId===z.id&&a.condition==='Горит')) || (String(z.id||'').startsWith('ASSET-FIRE-') && (s.assets||[]).some(a=>a.fireZoneId===z.id&&a.condition==='Горит')));
     // Restore or update immediate flame/smoke zones after the old hourly model pass.
     const ensureZone=(z)=>{const idx=s.fireZones.findIndex(q=>q.id===z.id);if(idx>=0)Object.assign(s.fireZones[idx],z);else s.fireZones.unshift(z);};
     for(const asset of s.assets||[]) if(asset && asset.condition==='Горит' && Number(asset.integrity||0)>0){
@@ -856,7 +856,7 @@
         if(adjacentFire && Math.random()<0.22) this._igniteCamp?.(camp,`распространение огня от очага ${adjacentFire.source||'на площади'}`);
         continue;
       }
-      const incident=(s.incidents||[]).find(i=>alive(i)&&['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type)&&Math.hypot(i.x-camp.x,i.y-camp.y)<Math.max(i.fireRadius||18,36));
+      const incident=(s.incidents||[]).find(i=>alive(i)&&['fire','arson'].includes(i.type)&&Math.hypot(i.x-camp.x,i.y-camp.y)<Math.max(i.fireRadius||18,36));
       if(incident && !camp.incidentId) camp.incidentId=incident.id;
     }
     this._v5ApplyBuildingCollapse();
@@ -867,7 +867,7 @@
   SP._updateCrowdDynamics = function() {
     if (priorCrowdDynamics) priorCrowdDynamics.call(this);
     const s=this.state; if(!s) return;
-    const fires=(s.fireZones||[]).filter(z=>z.condition==='Горит');
+    const fires=(s.fireZones||[]).filter(z=>z.condition!=='Выжжен');
     if(!fires.length) return;
     for(const b of s.barricades||[]) {
       if(b.burning || ['cleared','burned'].includes(b.status)) continue;

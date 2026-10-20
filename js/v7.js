@@ -422,20 +422,19 @@
     const result = prevFirePhysics ? prevFirePhysics.call(this) : undefined;
     if (!s) return result;
     // Drop ghost zones with no active event/object attached. Never delete a valid sourced fire.
-    const activeIncidentIds = new Set((s.incidents || []).filter(i => alive(i) && ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type)).map(i => i.id));
+    const activeIncidentIds = new Set((s.incidents || []).filter(i => alive(i) && ['fire','arson'].includes(i.type)).map(i => i.id));
     const burningAssetIds = new Set((s.assets || []).filter(a => a && a.condition === 'Горит').map(a => a.fireZoneId || `ASSET-FIRE-${a.id}`));
     const burningCampIds = new Set((s.campSites || []).filter(c => c && ['Горит','Тлеет'].includes(c.condition)).map(c => `CAMP-${c.id}`));
     const burningBarrierIds = new Set((s.barricades || []).filter(b => b && b.burning).map(b => b.fireZoneId || `BAR-FIRE-${b.id}`));
     s.fireZones = (s.fireZones || []).filter(z => {
-      if (!z || z.condition === 'Выжжен') return false;
-      if (z.condition === 'Потушено') return Number(z.smokeLife || 0) > 0;
+      if (!z || ['Потушено','Выжжен'].includes(z.condition)) return false;
       if (activeIncidentIds.has(z.id) || burningAssetIds.has(z.id) || burningCampIds.has(z.id) || burningBarrierIds.has(z.id)) return true;
       return validBefore.has(z.id) && (z.source || z.ignitionCause);
     });
     for (const c of s.campSites || []) {
       if (!c || !['Горит','Тлеет'].includes(c.condition)) continue;
       const adjacent = s.fireZones.some(z => z && z.id !== `CAMP-${c.id}` && z.condition === 'Горит' && Math.hypot(z.x-c.x,z.y-c.y) < (z.radius||20)+(c.radius||28)*0.68);
-      const related = (s.incidents || []).some(i => alive(i) && ['fire','arson','building_fire','roof_fire','camp_fire','vehicle_fire'].includes(i.type) && (i.id === c.incidentId || Math.hypot((i.x||0)-c.x,(i.y||0)-c.y) < (i.fireRadius||16)+(c.radius||28)*0.65));
+      const related = (s.incidents || []).some(i => alive(i) && ['fire','arson'].includes(i.type) && (i.id === c.incidentId || Math.hypot((i.x||0)-c.x,(i.y||0)-c.y) < (i.fireRadius||16)+(c.radius||28)*0.65));
       if (!c.ignitionCause && !adjacent && !related) {
         c.condition = 'Цел'; c.fireRemaining = 0; c.fireIntensity = 0; c.integrity = Math.max(35, Number(c.integrity || 35));
         s.fireZones = s.fireZones.filter(z => z.id !== `CAMP-${c.id}`);
