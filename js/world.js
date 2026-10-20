@@ -7,7 +7,6 @@ class RepublicCityScene extends Phaser.Scene {
     this.people = [];
     this.vehicles = [];
     this.trafficCars = [];
-    this.placardCount = 0;
     this.lastTrafficSpawn = 0;
     this.lastCrowdSync = 0;
     this.lastIncidentSync = 0;
@@ -470,12 +469,6 @@ class RepublicCityScene extends Phaser.Scene {
       wait: WORLD_U.random(0, 0.3), lastFlee: 0, interactionCooldown:WORLD_U.random(0,3),
       walkTimer:0, walkFrame:0, phase:Math.random()*6.28
     };
-    // A small number of readable placards establish distinct demands without obscuring the square.
-    if (agent.protester && picked.sign && this.placardCount < 26 && Math.random() < 0.30) {
-      const colors = { 'ЦЕНЫ':'#e2c66e','РАБОТА':'#d4a29a','ДОРОГИ':'#a5c5ce','ЭКОЛОГИЯ':'#a8c89c','НАЛОГИ':'#dfb47e','БУДУЩЕЕ':'#b9b9df','РАДИКАЛЫ':'#d2a09a','ПОРЯДОК':'#a7c4b9','ШКОЛЫ':'#bbc8e0','МЕДИЦИНА':'#a4d5cb','РАСХОДЫ':'#dfc39c','ПРОЕЗД':'#b0d3e0','ПРАВА':'#cdb8da' };
-      agent.placard = this.add.text(x, y-17, picked.sign, { fontFamily:'monospace', fontSize:'6px', fontStyle:'bold', color:'#202a2b', backgroundColor:colors[picked.sign] || '#dcd9c9', padding:{x:2,y:1} }).setOrigin(0.5,1).setDepth(y+7);
-      this.placardCount++;
-    }
     sprite.setData('agent', agent);
     this.people.push(agent);
   }
@@ -485,7 +478,6 @@ class RepublicCityScene extends Phaser.Scene {
     if (idx < 0) return;
     const a = this.people[idx];
     a.sprite.destroy();
-    if (a.placard) { a.placard.destroy(); this.placardCount = Math.max(0,this.placardCount-1); }
     this.people.pop();
   }
 
@@ -664,7 +656,6 @@ class RepublicCityScene extends Phaser.Scene {
       if (Math.abs(a.tx - a.x) > 1) a.sprite.setFlipX(a.tx < a.x);
       a.lastFlee = Math.max(0, a.lastFlee - dt);
       a.sprite.setAlpha(a.behavior === 'flee' ? 0.93 : 1);
-      if (a.placard) a.placard.setPosition(a.x, a.y - 18).setDepth(a.y + 8).setAlpha(a.behavior === 'flee' ? 0.78 : 1);
       if (moved > 0.02) {
         a.walkTimer -= dt;
         if (a.walkTimer <= 0) { a.walkFrame = (a.walkFrame + 1) % 4; a.walkTimer = 0.14; a.sprite.setTexture(`${a.baseTexture}-w${a.walkFrame}`); }
@@ -679,7 +670,7 @@ class RepublicCityScene extends Phaser.Scene {
         }
         const clashOdds = localTension > 80 ? 0.16 : localTension > 69 ? 0.095 : 0.045;
         if (nearestOfficer && officerDist < 3600 && Math.random() < clashOdds) {
-          this.interactionMarks.push({ type:'police-contact', x:a.x, y:a.y, expires:this.currentTime+1050 });
+
           const direction = a.x < nearestOfficer.x ? -1 : 1;
           a.behavior = 'flee'; a.tx = WORLD_U.clamp(a.x + direction * WORLD_U.random(42,115), 42,1238);
           a.ty = WORLD_U.clamp(a.y + WORLD_U.random(-35,30), 302,530); a.speed = WORLD_U.random(46,76); a.timer = 1.9;
@@ -713,7 +704,7 @@ class RepublicCityScene extends Phaser.Scene {
     const targetX = targetOfficer ? targetOfficer.x + WORLD_U.random(-5,5) : WORLD_U.clamp(agent.x + (agent.x < 640 ? 1 : -1) * WORLD_U.random(28,115), 55,1225);
     const targetY = targetOfficer ? targetOfficer.y - 5 + WORLD_U.random(-3,4) : (Math.random() < 0.18 ? WORLD_U.random(542,574) : WORLD_U.clamp(agent.y + WORLD_U.random(-60,18), 304,535));
     this.projectiles.push({ x:agent.x, y:agent.y-9, startX:agent.x, startY:agent.y-9, targetX, targetY, targetOfficer, elapsed:0, duration:WORLD_U.random(.42,.82), kind:firebrand?'firebrand':'petard', landed:false });
-    this.interactionMarks.push({ type:'throw', x:agent.x, y:agent.y, expires:this.currentTime+520 });
+
     if (firebrand) agent.behavior = 'arsonist';
   }
 
@@ -727,11 +718,11 @@ class RepublicCityScene extends Phaser.Scene {
       if(t>=1){
         if(!p.landed){
           p.landed=true;
-          this.interactionMarks.push({type:'throw-impact',x:p.targetX,y:p.targetY,expires:this.currentTime+750});
+
           const underLimit = s.incidents.filter(inc=>inc.status!=='resolved').length < this.sim.config.maxIncidents;
           if (!s.paused && p.kind === 'firebrand' && p.targetOfficer) {
             p.targetOfficer.setData('burningUntil', this.currentTime + 2200);
-            this.interactionMarks.push({type:'police-fire',x:p.targetOfficer.x,y:p.targetOfficer.y,expires:this.currentTime+2200});
+
             if (underLimit) { const inc=this.sim.addIncident('clash'); if(inc){inc.x=p.targetOfficer.x;inc.y=p.targetOfficer.y;} }
           } else if(!s.paused && p.kind==='firebrand' && Math.random()<(s.tension>82?0.58:0.39) && underLimit){
             const inc=this.sim.addIncident('arson'); if(inc){inc.x=p.targetX;inc.y=p.targetY;}
@@ -772,11 +763,16 @@ class RepublicCityScene extends Phaser.Scene {
           }
         }
       } else if (v.phase === 'onsite') {
-        v.returnTimer -= dt;
-        if (v.returnTimer <= 0) {
-          v.phase = 'return';
-          v.route = [{ x: 1005, y: 550 }, { x: 1130, y: 595 }, { x: 1320, y: 595 }];
-          v.routeStage = 0;
+        if (v.service === 'military') {
+          if (this.sim.state.militaryDeployed) { v.returnTimer = 999999; v.stationaryTask = this.sim.state.militaryTaskState || 'защита критической инфраструктуры'; }
+          else { if(v.v9MilitaryCounted){this.sim.state.militaryUnitsOnScene=Math.max(0,(this.sim.state.militaryUnitsOnScene||0)-1);v.v9MilitaryCounted=false;} v.phase = 'return'; v.route = [{ x: 1005, y: 550 }, { x: 1130, y: 595 }, { x: 1320, y: 595 }]; v.routeStage = 0; }
+        } else {
+          v.returnTimer -= dt;
+          if (v.returnTimer <= 0) {
+            v.phase = 'return';
+            v.route = [{ x: 1005, y: 550 }, { x: 1130, y: 595 }, { x: 1320, y: 595 }];
+            v.routeStage = 0;
+          }
         }
       } else if (v.phase === 'return') {
         const wp = v.route[Math.min(v.routeStage, v.route.length - 1)];
@@ -835,7 +831,7 @@ class RepublicCityScene extends Phaser.Scene {
       this.fx.lineStyle(2,0xd5b16b,0.18+s.roadBlockage*0.24); this.fx.beginPath(); this.fx.moveTo(500,545); this.fx.lineTo(786,545); this.fx.strokePath();
     }
     for (const car of this.trafficCars) {
-      if (car.speed > 18) { this.fx.fillStyle(0xe2d3a3,0.12); this.fx.fillCircle(car.x+(car.direction>0?-12:12),car.y-2,2); }
+      // No decorative dots or circular location markers on the map.
       if (this.sim.state.weather.id === 'rain' || this.sim.state.weather.id === 'storm') { this.fx.fillStyle(0xb8c5c3,0.08); this.fx.fillRect(car.x-13,car.y+6,26,2); }
     }
     // Emergency light reflections blink on vehicles and wet stone.
@@ -843,21 +839,18 @@ class RepublicCityScene extends Phaser.Scene {
       const burningUntil = officer.getData ? (officer.getData('burningUntil') || 0) : 0;
       if (burningUntil > this.currentTime) {
         const flame = 0.68 + Math.sin(time * 0.035 + officer.x * 0.04) * 0.2;
-        this.fx.fillStyle(0xee713c, flame); this.fx.fillCircle(officer.x, officer.y - 12, 5.5);
-        this.fx.fillStyle(0xffc66a, flame * 0.9); this.fx.fillTriangle(officer.x - 3.5, officer.y - 10, officer.x, officer.y - 20, officer.x + 3.5, officer.y - 10);
+        this.fx.fillStyle(0x7d301c, flame * 0.78); this.fx.fillPoints([{x:officer.x-4,y:officer.y-7},{x:officer.x-3,y:officer.y-15},{x:officer.x,y:officer.y-21},{x:officer.x+2,y:officer.y-14},{x:officer.x+5,y:officer.y-18},{x:officer.x+5,y:officer.y-7}],true);
+        this.fx.fillStyle(0xf4a24b, flame * 0.86); this.fx.fillPoints([{x:officer.x-2,y:officer.y-7},{x:officer.x-1,y:officer.y-13},{x:officer.x+1,y:officer.y-17},{x:officer.x+2,y:officer.y-11},{x:officer.x+3,y:officer.y-7}],true);
       }
     }
     for (const v of this.vehicles) {
       if (v.phase === 'return') continue;
       const flash = Math.sin(v.sirenPhase) > 0;
       const c1 = v.service === 'fire' ? 0xf0a85e : 0xd9534f;
-      this.fx.fillStyle(flash ? c1 : 0x4e9dd0, nightAlpha > 0.07 ? 0.48 : 0.75);
-      this.fx.fillCircle(v.x - 3, v.y - 3, 3.2);
-      this.fx.fillStyle(flash ? 0x4d9acb : c1, nightAlpha > 0.07 ? 0.48 : 0.75);
-      this.fx.fillCircle(v.x + 3, v.y - 3, 3.2);
-      if (nightAlpha > 0.08 && flash) {
-        this.fx.fillStyle(c1, 0.055); this.fx.fillCircle(v.x, v.y, 23);
-      }
+      this.fx.fillStyle(flash ? c1 : 0x4e9dd0, nightAlpha > 0.07 ? 0.68 : 0.9);
+      this.fx.fillRect(v.x - 6, v.y - 5, 5, 3);
+      this.fx.fillStyle(flash ? 0x4d9acb : c1, nightAlpha > 0.07 ? 0.68 : 0.9);
+      this.fx.fillRect(v.x + 1, v.y - 5, 5, 3);
     }
     if (s.weather.id === 'rain' || s.weather.id === 'storm') {
       const count = s.weather.id === 'storm' ? 120 : 62;

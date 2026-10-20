@@ -284,7 +284,7 @@
   };
   UP.updateStats = function() {
     if(priorUI.updateStats) priorUI.updateStats.call(this);
-    const foot=document.querySelector('.app-footer span'); if(foot) foot.textContent='КОНТУР // ВЕРСИЯ 7.2.0';
+    const foot=document.querySelector('.app-footer span'); if(foot) foot.textContent=`КОНТУР // ВЕРСИЯ ${window.GAME_CONFIG?.version||'7.2.0'}`;
   };
-  document.addEventListener('DOMContentLoaded',()=>{const foot=document.querySelector('.app-footer span');if(foot)foot.textContent='КОНТУР // ВЕРСИЯ 7.2.0';},{once:true});
+  document.addEventListener('DOMContentLoaded',()=>{const foot=document.querySelector('.app-footer span');if(foot)foot.textContent=`КОНТУР // ВЕРСИЯ ${window.GAME_CONFIG?.version||'7.2.0'}`;},{once:true});
 })();

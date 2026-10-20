@@ -13,6 +13,27 @@
   const choose = a => a[Math.floor(Math.random() * a.length)];
   const alive = i => i && i.status !== 'resolved';
   const onFire = c => c && ['Горит', 'Тлеет'].includes(c.condition);
+  // A connected, turbulent flame front made from broad layered silhouettes (not tiny triangle icons).
+  const drawFireMass = (g,cx,baseY,width,height,time,seed,alpha=1) => {
+    const layer=(scale,color,opacity,phase)=>{
+      const w=width*scale,h=height*scale,pts=[{x:cx-w*.56,y:baseY+2}];
+      for(let i=0;i<=18;i++){
+        const u=i/18,x=cx-w*.52+u*w*1.04;
+        const envelope=.52+.29*Math.sin(Math.PI*u)+.10*Math.sin(Math.PI*2*u+seed*.7+phase);
+        const turbulence=.11*Math.sin(time*.009+seed+i*.83+phase)+.055*Math.sin(time*.017+i*1.37+seed*.3);
+        const shoulder=.08*Math.sin(Math.PI*3*u+seed+time*.004);
+        const top=baseY-h*Math.max(.18,envelope+turbulence+shoulder);
+        pts.push({x,y:top});
+      }
+      pts.push({x:cx+w*.55,y:baseY+2});
+      g.fillStyle(color,Math.max(0,Math.min(1,alpha*opacity))).fillPoints(pts,true);
+    };
+    layer(1,0x8e2b1b,.46,0);
+    layer(.82,0xe75227,.86,1.1);
+    layer(.58,0xff963b,.94,2.4);
+    layer(.34,0xffcc68,.87,3.3);
+    layer(.17,0xffe6a0,.72,4.1);
+  };
   const SP = Sim.prototype;
   const P = Scene.prototype;
   const UP = UI.prototype;
@@ -226,7 +247,8 @@
     const trueBuildingThreat = siege > 68 || Number(s.building?.integrity ?? 100) < 16 || (s.building?.occupation && siege > 30);
     const crowdRatio = Number(s.crowdTarget || 0) / Math.max(1, (Number(s.policePresence || 30) * 28) + (s.militaryDeployed ? 260 : 0));
     s.forceCap = anger >= 975 && (Number(s.deaths || 0) > 0 || trueBuildingThreat) ? 7 : anger >= 900 ? 6 : anger >= 765 ? 5 : anger >= 590 ? 4 : anger >= 410 ? 3 : anger >= 240 ? 2 : 1;
-    s.policeCommandOverride = null;
+    const commandOverride = s.policeCommandOverride && Number(s.policeCommandOverride.until) > now ? s.policeCommandOverride : null;
+    if (!commandOverride) s.policeCommandOverride = null;
 
     if (!eventDriven) {
       s.policeShiftHours = (s.policeShiftHours || 0) + 1;
@@ -234,19 +256,20 @@
       s.policeFatigue = clamp((s.policeFatigue || 12) + 0.34 + (violent.length || activeFire ? 0.42 : 0.06) - rest);
       s.policeMorale = clamp((s.policeMorale || 72) + ((s.policies?.policing || 45) - 50) * 0.003 - (s.policeFatigue > 78 ? 0.35 : 0) - (s.trust < 20 ? 0.18 : 0.03));
     }
-    let code = 'observe', doctrine = 'Наблюдение';
-    if (s.policeMorale < 10 && crowdRatio > 2.5 && violent.length) { code = 'withdraw'; doctrine = 'Отступление из опасного сектора'; }
-    else if (trueBuildingThreat && anger > 800 && Math.random() < 0.48) { code = 'protect'; doctrine = 'Защита объекта при штурме'; }
-    else if (anger >= 820 && violent.length > 0 && s.policeMorale > 18 && s.forceCap >= 5) { code = 'disperse'; doctrine = 'Наступление и рассредоточение толпы'; }
-    else if (activeFire || violent.length >= 2 || anger > 650) { code = 'contain'; doctrine = 'Сдерживание активных очагов'; }
-    else if (trueBuildingThreat) { code = 'protect'; doctrine = 'Защита периметра здания'; }
-    else if (anger > 370 || active.length) { code = 'cordon'; doctrine = 'Кордон и открытые коридоры'; }
-    else if (s.policeFatigue > 86 && Math.random() < 0.45) { code = 'withdraw'; doctrine = 'Ротация и отход'; }
+    let code = commandOverride?.code || 'observe', doctrine = commandOverride?.label || 'Наблюдение';
+    if (!commandOverride && s.policeMorale < 10 && crowdRatio > 2.5 && violent.length) { code = 'withdraw'; doctrine = 'Отступление из опасного сектора'; }
+    else if (!commandOverride && trueBuildingThreat && anger > 800 && Math.random() < 0.48) { code = 'protect'; doctrine = 'Защита объекта при штурме'; }
+    else if (!commandOverride && anger >= 820 && violent.length > 0 && s.policeMorale > 18 && s.forceCap >= 5) { code = 'disperse'; doctrine = 'Наступление и рассредоточение толпы'; }
+    else if (!commandOverride && (activeFire || violent.length >= 2 || anger > 650)) { code = 'contain'; doctrine = 'Сдерживание активных очагов'; }
+    else if (!commandOverride && trueBuildingThreat) { code = 'protect'; doctrine = 'Защита периметра здания'; }
+    else if (!commandOverride && (anger > 370 || active.length)) { code = 'cordon'; doctrine = 'Кордон и открытые коридоры'; }
+    else if (!commandOverride && s.policeFatigue > 86 && Math.random() < 0.45) { code = 'withdraw'; doctrine = 'Ротация и отход'; }
 
     const changed = code !== s.doctrineCode;
     s.doctrineCode = code; s.doctrine = doctrine; s.doctrineDecisionAt = now;
     if (changed) this._radio?.('Полиция','Автономное командование',`Решение ИИ: ${doctrine.toLowerCase()}. Злость ${Math.round(anger)}/1000; численность на площади ${Math.round(s.crowdTarget || 0)}; мораль ${Math.round(s.policeMorale)}%.`, code === 'disperse' ? 'warning' : 'info','police');
 
+    if (commandOverride) return;
     const risk = Math.max(anger / 1000, violent.length ? 0.48 : 0, activeFire ? 0.52 : 0, trueBuildingThreat ? 0.76 : 0);
     // Major incidents can trigger an immediate response, not just a doctrine change.
     // A shorter event cooldown keeps the response visible at the 1 min / real second clock.
@@ -561,36 +584,13 @@
     if (s.weather?.id === 'fog') alpha = Math.min(0.69, alpha + 0.06);
     if (s.weather?.id === 'storm') alpha = Math.min(0.72, alpha + 0.07);
     if (alpha > 0.005) g.fillStyle(0x07131e, alpha).fillRect(0,0,1280,640);
-    if (alpha > 0.12) {
-      for (const [x,y,r] of [[182,390,30],[1094,385,31],[333,451,22],[945,448,23],[640,285,25]]) {
-        g.fillStyle(0xf7ce88, alpha*0.12).fillCircle(x,y,r*1.7);
-        g.fillStyle(0xffdf9b, alpha*0.36).fillCircle(x,y,Math.max(2,r*0.18));
-      }
-    }
   };
 
   P._v5RenderFlagsAndBarricades = function(s, time) {
     const f = this.v5FlagFx, bfx = this.v5BarrierFx;
     if (!f || !bfx) return;
     f.clear(); bfx.clear();
-    // Generic fictional banners. Different palettes/patterns avoid copying any specific real movement's insignia.
-    for (const camp of s.campSites || []) {
-      if (['Выжжен','Снят'].includes(camp.condition)) continue;
-      for (let i=0;i<Math.min(3, camp.tentCount || 2);i++) {
-        const x=camp.x-(camp.radius||30)*0.52+i*11;
-        f.lineStyle(1.25,0x323734,0.85).beginPath().moveTo(x,camp.y-18).lineTo(x,camp.y-43).strokePath();
-        const color=[0xb44842,0x688a79,0xd2b95f][(i+Math.floor(camp.createdAt||0))%3];
-        f.fillStyle(color,0.96).beginPath().moveTo(x+1,camp.y-42).lineTo(x+14,camp.y-38).lineTo(x+1,camp.y-30).closePath().fillPath();
-      }
-    }
-    for (const a of this.people || []) {
-      if (!a.v5Flag || !a.protester || a.detained || !a.sprite?.active) continue;
-      const wave=Math.sin(time*.006+(a.v4Id||0)) * 3;
-      f.lineStyle(1.2,0x373b38,.9).beginPath().moveTo(a.x+3,a.y-8).lineTo(a.x+3,a.y-23).strokePath();
-      f.fillStyle(a.v5FlagColor||0xb6423d,.96).beginPath().moveTo(a.x+4,a.y-23).lineTo(a.x+14+wave,a.y-19).lineTo(a.x+4,a.y-13).closePath().fillPath();
-      if (a.v5FlagPattern===1) { f.lineStyle(1,0xe5dec8,.8).beginPath().moveTo(a.x+5,a.y-19).lineTo(a.x+11,a.y-18).strokePath(); }
-      if (a.v5FlagPattern===2) { f.fillStyle(0xe8dec1,.9).fillCircle(a.x+7,a.y-18,1.25); }
-    }
+    // Color-coded pennants and crowd flags are intentionally omitted; no colored marker tokens are drawn.
     for (const bar of s.barricades || []) {
       if (['cleared'].includes(bar.status)) continue;
       const x=bar.x, y=bar.y, len=bar.length||88, health=clamp(bar.health ?? 40,0,100);
@@ -608,17 +608,13 @@
         const tx=x-len*.35+j*(len*.70/Math.max(1,tires-1));
         bfx.fillStyle(bar.burning?0x252522:0x1f2525,.98).fillEllipse(tx,y+2,12,10);
         bfx.lineStyle(1,bar.burning?0x55453a:0x596260,.75).strokeEllipse(tx,y+2,12,10);
-        bfx.fillStyle(0x656a65,.42).fillCircle(tx,y+2,2.5);
-      }
+        }
       bfx.fillStyle(0xe2ba65,.92).fillRect(x-len*.42,y-6,len*.84,2);
       bfx.fillStyle(0x252b2a,.88).fillRect(x-len/2,y-20,Math.max(4,len*health/100),2);
       if (bar.burning || bar.condition==='Горит') {
         const p=.7+Math.sin(time*.024+x)*.2;
         bfx.fillStyle(0x25221d,.36).fillEllipse(x,y-7,len*.55,15);
-        for(let k=0;k<3;k++){const fx=x+(k-1)*len*.23+Math.sin(time*.021+k*2+x)*3;const fh=13+((time*.008+k*0.31+x*.01)%1)*17;
-          bfx.fillStyle(k%2?0xdf5b2e:0xf48a39,p).fillTriangle(fx-5,y-5,fx,y-fh-7,fx+6,y-5);
-          bfx.fillStyle(0xffd16b,p*.9).fillTriangle(fx-2.3,y-6,fx,y-fh*.7,fx+2.5,y-6);
-        }
+        drawFireMass(bfx,x,y-3,len*.68,24+Math.sin(time*.012+x)*4,time,x*.2+y,p);
       }
     }
   };
@@ -657,18 +653,10 @@
       const flicker=.78+Math.sin(time*.035+z.x*.3+index)*.16+Math.sin(time*.019+z.y)*.10;
       flames.fillStyle(0x332b25,.12*intensity).fillEllipse(z.x,z.y+1,r*4.3,r*.64);
       flames.fillStyle(0xff8b30,.15*intensity).fillEllipse(z.x,z.y-8,r*2.9,r*1.05);
-      const tongues=Math.min(15,Math.max(6,Math.round(6+area/18)));
-      for(let k=0;k<tongues;k++) {
-        const off=((k/(tongues-1))-.5)*r*2;
-        const wobble=Math.sin(time*.031+k*2.1+z.x*.015)*4;
-        const h=(15+((Math.sin(time*.027+k*1.73+z.y*.02)+1)*.5)*Math.min(94,22+area*.62))*flicker;
-        const bx=z.x+off+wobble;
-        flames.fillStyle(k%3===0?0xd94825:0xf17028,.88).fillTriangle(bx-r*.18,z.y-1,bx+wobble*.5,z.y-h-5,bx+r*.2,z.y-1);
-        flames.fillStyle(k%2?0xffc14d:0xffdc75,.9).fillTriangle(bx-r*.075,z.y-3,bx+1,z.y-h*.56-4,bx+r*.09,z.y-3);
-      }
+      drawFireMass(flames,z.x,z.y-1,r*3.1,(24+area*.92)*flicker,time,index+z.x*.13,.96);
       for(let k=0;k<3;k++) {
         const ex=z.x+Math.sin(time*.016+k*4+z.y)*r*1.4, ey=z.y-14-((time*.018+k*.33+index*.1)%1)*24;
-        flames.fillStyle(0xffc56a,.45).fillCircle(ex,ey,1.1+(k%2));
+        flames.lineStyle(1.0,0xffc56a,.45).beginPath().moveTo(ex,ey+2).lineTo(ex+Math.sin(time*.021+k)*2,ey-3).strokePath();
       }
     });
     // Vehicle fires have persistent object state; keep rendering until the vehicle has burned out.
@@ -678,12 +666,7 @@
       if(burning){
         const t=.78+Math.sin(time*.031+x*.03)*.18;
         flames.fillStyle(0xf05a25,.24*t).fillEllipse(x,y-7,34,28);
-        for(let k=0;k<5;k++){
-          const fx=x+(k-2)*5+Math.sin(time*.023+k*2.2+x)*2;
-          const fh=13+((Math.sin(time*.027+k*1.7+y*.01)+1)*.5)*23;
-          flames.fillStyle(k%3===0?0xd84425:0xf17a2b,.91).fillTriangle(fx-3,y-1,fx+Math.sin(time*.02+k)*3,y-fh,fx+4,y-1);
-          flames.fillStyle(0xffc85d,.86).fillTriangle(fx-1.2,y,fx,y-fh*.52,fx+1.5,y);
-        }
+        drawFireMass(flames,x,y+1,32,30,time,(v.id||v.vehicleRecordId||2).toString().length+42,.95);
         drawPlume(x,y-3,64,1.05,(s.windDirection||1)*11,(v.id||v.vehicleRecordId||1).toString().length+500);
       } else {
         smoke.fillStyle(0x303533,.28).fillEllipse(x,y-5,25,13);
@@ -719,11 +702,7 @@
         const timeLeft=(a.v5BurningUntil-this.currentTime);
         const p=.78+Math.sin(time*.036+(a.v4Id||0))*0.16;
         flames.fillStyle(0xed5525,.36*p).fillEllipse(a.x,a.y-11,17,25);
-        for(let k=0;k<3;k++) {
-          const dx=(k-1)*4+Math.sin(time*.022+k*2+a.x)*2;
-          const h=10+((time*.012+k*.39+a.y*.01)%1)*13;
-          flames.fillStyle(k===1?0xffc65c:0xef6b2d,.88).fillTriangle(a.x+dx-3,a.y-5,a.x+dx,a.y-h-9,a.x+dx+3,a.y-5);
-        }
+        drawFireMass(flames,a.x,a.y-5,18,18,time,a.v4Id||1,.90);
         if(timeLeft%550<50) drawPlume(a.x,a.y-4,14,.55,4,a.v4Id||1);
       }
     }
@@ -731,9 +710,7 @@
       if (Number(officer.getData('burningUntil') || 0) > (this.currentTime || 0)) {
         const p=.72+Math.sin(time*.033+officer.x)*.18;
         flames.fillStyle(0xed5525,.42*p).fillEllipse(officer.x,officer.y-10,16,22);
-        for(let k=0;k<3;k++) { const dx=(k-1)*4+Math.sin(time*.025+k*1.9+officer.x)*2; const h=12+((time*.012+k*.31+officer.y*.01)%1)*11;
-          flames.fillStyle(k===1?0xffc65c:0xef6b2d,.9).fillTriangle(officer.x+dx-3,officer.y-4,officer.x+dx,officer.y-h-8,officer.x+dx+3,officer.y-4);
-        }
+        drawFireMass(flames,officer.x,officer.y-4,19,20,time,officer.x*.03,.92);
       }
     }
     // Government-building condition and the assault objective are visibly different from a static intact facade.
@@ -746,12 +723,7 @@
       const ax=Number(asset.x||640), ay=Number(asset.y||450), ar=clamp(asset.radius||14,8,38);
       const phase=.78+Math.sin(time*.031+idx*1.7+ax)*.18;
       flames.fillStyle(0xe95625,.16*phase).fillEllipse(ax,ay-7,ar*2.3,ar*2.7);
-      for(let k=0;k<4;k++) {
-        const fx=ax+(k-1.5)*ar*.42+Math.sin(time*.029+k*2+idx)*2;
-        const fh=(12+((Math.sin(time*.025+k*1.8+ay*.01)+1)*.5)*Math.min(34,13+ar*.6))*phase;
-        flames.fillStyle(k%3===0?0xd84624:0xf17a2b,.9).fillTriangle(fx-ar*.16,ay+1,fx,ay-fh,fx+ar*.17,ay+1);
-        flames.fillStyle(0xffcb69,.84).fillTriangle(fx-ar*.06,ay,fx,ay-fh*.57,fx+ar*.07,ay);
-      }
+      drawFireMass(flames,ax,ay+1,ar*2.0,(15+ar*.72)*phase,time,idx+ax*.07,.94);
       if (idx%2===0) drawPlume(ax,ay-3,ar*2,Math.max(.45,Number(asset.fireIntensity||.7)),(s.windDirection||1)*8,idx+1200);
     }
     if (integrity < 99) {
@@ -787,12 +759,7 @@
     }
     if (buildingAsset?.condition==='Горит' || (integrity<46 && integrity>0)) {
       const int=clamp((100-integrity)/100,.2,1.2);
-      for(let k=0;k<7;k++) {
-        const x=514+k*41+Math.sin(time*.022+k)*5;
-        const h=(18+((Math.sin(time*.031+k*1.7)+1)*.5)*30)*int;
-        flames.fillStyle(k%3===0?0xdd4d28:0xf1782c,.9).fillTriangle(x-8,246,x,235-h,x+7,246);
-        flames.fillStyle(0xffca69,.86).fillTriangle(x-3,245,x,239-h*.58,x+3,245);
-      }
+      drawFireMass(flames,650,246,290,46*int,time,773,.95);
       drawPlume(640,235,66,1.25,(s.windDirection||1)*18,773);
     }
   };

@@ -36,8 +36,8 @@ class RepublicDashboardUI {
       button.addEventListener('click', () => {
         const action = button.dataset.action;
         if (action === 'negotiate') { this.openNegotiations(); return; }
-        if (action === 'military' && !window.confirm('Привлечение военных повышает оперативные ресурсы, но существенно снижает общественное доверие. Применить эту меру?')) return;
-        if (action === 'emergency' && !window.confirm('Ввести временный режим чрезвычайного положения на два модельных дня?')) return;
+        // Military choices are already confirmed in the blocking political-decision layer.
+        // Emergency measures are confirmed by the common decision window.
         const success = this.sim.enactAction(action);
         if (success) this.toast('Решение зарегистрировано', this.sim.state.lastAction, action === 'military' || action === 'emergency' ? 'warning' : 'success');
       });
@@ -459,7 +459,7 @@ class RepublicDashboardUI {
     ctx.beginPath(); coords.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
     ctx.strokeStyle = '#79b3a3'; ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; ctx.stroke();
     const current = coords[coords.length - 1];
-    ctx.fillStyle = '#d8e3d9'; ctx.beginPath(); ctx.arc(current.x, current.y, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#d8e3d9'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(current.x, current.y - 3.5); ctx.lineTo(current.x, current.y + 3.5); ctx.stroke();
     ctx.font = '8px ui-monospace, monospace'; ctx.fillStyle = '#718885';
     ctx.fillText(`Д${String(this.sim.state.day).padStart(2, '0')}`, pad.left, h - 1);
     ctx.textAlign = 'right'; ctx.fillText(`БАЗА 100`, w - pad.right, h - 1);

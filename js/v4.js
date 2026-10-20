@@ -11,6 +11,20 @@
   const choose = a => a[Math.floor(Math.random() * a.length)];
   const alive = i => i && i.status !== 'resolved';
   const CENTER = { id:'center', name:'Площадь Республики', kind:'площадь', crowd:0, tension:38, blockage:0.04, incidents:0, contagion:0.16 };
+  const drawCampFlame = (g,cx,baseY,width,height,time,seed,alpha=1) => {
+    const layer=(scale,color,opacity,phase)=>{
+      const w=width*scale,h=height*scale,pts=[{x:cx-w*.54,y:baseY+2}];
+      for(let i=0;i<=22;i++){
+        const u=i/22,x=cx-w*.52+u*w*1.04;
+        const envelope=.58+.19*Math.sin(Math.PI*u)+.075*Math.sin(Math.PI*3*u+seed*.05+phase);
+        const turbulence=.075*Math.sin(time*.012+seed*.03+i*.71+phase)+.04*Math.sin(time*.021+i*1.19+seed*.04);
+        pts.push({x,y:baseY-h*Math.max(.23,envelope+turbulence)});
+      }
+      pts.push({x:cx+w*.54,y:baseY+2});
+      g.fillStyle(color,Math.max(0,Math.min(1,alpha*opacity))).fillPoints(pts,true);
+    };
+    layer(1,0x77271b,.72,0);layer(.84,0xe34b22,.88,1.1);layer(.62,0xff8b30,.94,2.2);layer(.38,0xffc05a,.9,3.4);layer(.20,0xffe2a0,.72,4.2);
+  };
   const makeCamps = () => [
     { id:'camp-west', name:'Западный палаточный лагерь', x:365, y:472, radius:34, integrity:100, condition:'Цел', fireRemaining:0, fireIntensity:0, tentCount:5, rebuildAt:0 },
     { id:'camp-east', name:'Восточный палаточный лагерь', x:930, y:468, radius:36, integrity:100, condition:'Цел', fireRemaining:0, fireIntensity:0, tentCount:6, rebuildAt:0 },
@@ -347,7 +361,6 @@
     a.tx = clamp(a.x + rnd(-100,100), 130,1150); a.ty = clamp(a.y + rnd(-50,50), 300,540);
     a.v4OrderVersion = -1; a.v4EvacuatingUntil = 0; a.v4LastHazardId = null; a.v4ThrowCooldown = rnd(2,11);
     a.sprite.setPosition(a.x,a.y).setDepth(a.y + 3);
-    if (a.placard) a.placard.setPosition(a.x,a.y-18).setDepth(a.y+8);
   };
 
   P._syncCrowd = function() {
@@ -382,21 +395,19 @@
       const count=camp.tentCount||4;
       for(let t=0;t<count;t++) {
         const col=t%3,row=Math.floor(t/3),x=camp.x+(col-1)*19+(row%2?5:0),y=camp.y+row*10;
-        const tint=burnt?0x343938:burning?0x4a3932:damage?0x756a59:[0xb7a982,0x8b9b91,0x9d9a85][t%3];
+        const tint=burnt?0x343938:burning?0x34302b:damage?0x756a59:[0xb7a982,0x8b9b91,0x9d9a85][t%3];
         g.fillStyle(0x1e2626,0.5);g.fillEllipse(x+1,y+4,18,5);
         g.fillStyle(tint,0.98);g.fillTriangle(x-9,y+3,x,y-12,x+9,y+3);
         g.lineStyle(1,burnt?0x1d2222:0xd9ceb0,0.7);g.strokeTriangle(x-9,y+3,x,y-12,x+9,y+3);
         g.fillStyle(burning?0x3c3029:burnt?0x242a29:0x566e6e,0.95);g.fillRect(x-1,y-1,3,4);
         if(burning){
-          const flick=.55+Math.sin(this.currentTime*.026+t*2+i)*.3;
-          g.fillStyle(0xec7437,flick);g.fillTriangle(x-5,y+1,x,y-9-Math.sin(this.currentTime*.02+t)*2,x+5,y+1);
-          g.fillStyle(0xffc26c,Math.min(1,flick+.2));g.fillTriangle(x-2,y,x,y-6,x+2,y);
+          g.lineStyle(1,0x261f1b,.72);g.beginPath().moveTo(x-6,y-3).lineTo(x-2,y+2).lineTo(x+5,y-2).strokePath();
         } else if(burnt) {
           g.lineStyle(1,0x161a19,.8);g.beginPath();g.moveTo(x-6,y-4);g.lineTo(x+5,y+2);g.moveTo(x+2,y-9);g.lineTo(x-4,y+1);g.strokePath();
         }
       }
       if(burning){
-        g.fillStyle(0x353c3a,0.16);g.fillEllipse(camp.x,camp.y-22,camp.radius*1.8,camp.radius*1.0);
+        drawCampFlame(g,camp.x,camp.y+5,camp.radius*1.62,camp.radius*.84,this.currentTime,camp.x+i*11,.96);
       }
     });
   };
@@ -562,7 +573,6 @@
     for(const p of landed){
       if(p.kind==='petard'){
         s.gasZones=s.gasZones||[];s.gasZones.unshift({id:`PANIC-${s.day}-${Math.round(this.currentTime)}-${irnd(10,99)}`,x:p.targetX,y:p.targetY,radius:72,life:1.8,intensity:1,kind:'petard',source:'protest'});
-        this.interactionMarks?.push({type:'throw-impact',x:p.targetX,y:p.targetY,expires:this.currentTime+1100});
       }
       if(p.kind==='firebrand' && !s.paused){
         if(p.targetCampId){const camp=(s.campSites||[]).find(c=>c.id===p.targetCampId);if(camp)this.sim._igniteCamp(camp,'попадание абстрактного зажигательного токена');}
@@ -586,11 +596,11 @@
     if(this.fx){
       for(const camp of s.campSites||[]){
         if(camp.condition==='Горит'||camp.condition==='Тлеет'){
-          const p=.6+Math.sin(time*.028+camp.x)*.24;const r=camp.radius||30;
+          const r=camp.radius||30;
           this.fx.fillStyle(0x282e2d,.18);this.fx.fillEllipse(camp.x,camp.y-23,r*2.2,r*1.35);
           for(let j=0;j<5;j++){const dx=Math.sin(time*.003+j*1.8+camp.x)*r*.45;const rise=(time*.013+j*13)%(r+34);this.fx.fillStyle(j%2?0x525a56:0x353b39,Math.max(.02,.15-rise/(r+34)*.12));this.fx.fillCircle(camp.x+dx,camp.y-rise-14,5+rise*.22);}
-          this.fx.fillStyle(0x352b26,.18);this.fx.fillEllipse(camp.x,camp.y,r*1.6,r*.38);
-          this.fx.fillStyle(0xef7435,.10+p*.05);this.fx.fillEllipse(camp.x,camp.y-5,r*1.9,r*.62);
+          drawCampFlame(this.fx,camp.x,camp.y+6,r*1.72,r*.92,time,camp.x,.9);
+
         } else if(camp.condition==='Выжжен'){
           this.fx.fillStyle(0x2c302f,.32);this.fx.fillEllipse(camp.x,camp.y,camp.radius*1.2,camp.radius*.5);
         }

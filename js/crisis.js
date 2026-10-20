@@ -455,7 +455,8 @@
     const activeRiots = active.filter(i => ['riot','clash','looting','building_assault','radical_attack'].includes(i.type)).length;
     const buildingThreat = (s.building.integrity < 70) || s.building.siege > 0 || active.some(i => i.type === 'building_assault');
     const forceInLimits = s.forceCap || 0;
-    const crowdRatio = (s.crowdTarget || 0) / Math.max(1, (s.policePresence || 30) * 24 + (s.militaryDeployed ? 420 : 0));
+    const crowdLoad = window.KonturV9?.hostileLoad(s) ?? (Number(s.crowdTarget)||0)*0.22;
+    const crowdRatio = crowdLoad / Math.max(1, (s.policePresence || 30) * 24 + (s.militaryDeployed ? 420 : 0));
     if (!eventDriven) {
       s.policeShiftHours = (s.policeShiftHours || 0) + 1;
       s.policeFatigue = clamp((s.policeFatigue || 0) + 0.42 + (activeRiots > 0 ? 0.28 : 0) - ((s.policeShiftHours % 12 === 0) ? 1.8 : 0));
@@ -1239,7 +1240,6 @@
       } else {
         agent.tx = agent.x; agent.ty = agent.y; agent.speed = 0; agent.timer = 1; agent.wait = 1;
         if (agent.sprite) agent.sprite.setTint(0xd6b56b).setAlpha(0.95);
-        if (agent.placard) agent.placard.setVisible(false);
       }
     }
     const fires=s.fireZones||[]; let fireHelpers=0;
@@ -1261,7 +1261,7 @@
     const police=this.crowdPolice||[]; if(!police.length||!dt) return;
     const incidents=s.incidents.filter(i=>i.status!=='resolved');
     const hostile=this.people.filter(a=>a.protester && ['agitator','radical','looter','arsonist','volatile','casseur','provocateur'].includes(a.behavior));
-    const crowdRatio=(s.crowdTarget||0)/Math.max(1,(s.policePresence||35)*24+(s.militaryDeployed?420:0));
+    const crowdLoad=window.KonturV9?.hostileLoad(s) ?? (Number(s.crowdTarget)||0)*0.22;const crowdRatio=crowdLoad/Math.max(1,(s.policePresence||35)*24+(s.militaryDeployed?420:0));
     const targetIncident=incidents.slice().sort((a,b)=>(b.severity||0)-(a.severity||0))[0];
     const danger=targetIncident && ['riot','clash','arson','fire','looting','building_assault','radical_attack','special_vehicle_attack'].includes(targetIncident.type);
     police.forEach((officer,index)=>{
@@ -1295,7 +1295,7 @@
           this.sim._radio('Полиция','Патруль',`Задержан конкретный участник ${target.groupId||'собрания'}; проводится проверка обстоятельств.`,'warning','police');
           this.sim._radio('Гражданский','Очевидец','На краю собрания прошла точечная задержка; собравшиеся требуют назвать основание.','warning','police');
           this.sim.state.policeActionSeq=(s.policeActionSeq||0)+1;
-          this.interactionMarks.push({type:'police-contact',x:target.x,y:target.y,expires:this.currentTime+1200});
+
         }
       }
       const burningUntil=officer.getData('burningUntil')||0;
@@ -1328,12 +1328,12 @@
       const p=this.projectiles[i];p.elapsed+=dt;const t=U.clamp(p.elapsed/p.duration,0,1);
       p.x=p.startX+(p.targetX-p.startX)*t;p.y=p.startY+(p.targetY-p.startY)*t-Math.sin(t*Math.PI)*31;
       if(t<1) continue;
-      this.interactionMarks.push({type:'throw-impact',x:p.targetX,y:p.targetY,expires:this.currentTime+850});
+
       const underLimit=s.incidents.filter(inc=>inc.status!=='resolved').length<this.sim.config.maxIncidents;
       if(!s.paused&&p.kind==='firebrand') {
         if(p.targetOfficer) {
           p.targetOfficer.setData('burningUntil',this.currentTime+2200);
-          this.interactionMarks.push({type:'police-fire',x:p.targetOfficer.x,y:p.targetOfficer.y,expires:this.currentTime+2200});
+
           if(underLimit){const inc=this.sim.addIncident('clash');if(inc){inc.x=p.targetOfficer.x;inc.y=p.targetOfficer.y;}}
         } else if(Math.random()<(s.tension>82?.58:.39)&&underLimit) {
           const inc=this.sim.addIncident('arson');if(inc){inc.x=p.targetX;inc.y=p.targetY;inc.districtId=s.activeDistrict||'center';}
@@ -1594,7 +1594,7 @@
     if(!action || action.seq===this.crisisLastActionSeq) return;
     this.crisisLastActionSeq=action.seq;
     if(['gas','water','flash'].includes(action.method)) {
-      const zone=(s.gasZones||[])[0];if(zone) this.interactionMarks.push({type:'throw-impact',x:zone.x,y:zone.y,expires:this.currentTime+1200});
+      const zone=(s.gasZones||[])[0];
       this.people.forEach(a=>{if(a.protester && Math.random()<0.28){a.behavior='flee';a.tx=clamp(a.x+(a.x<640?-1:1)*rnd(55,140),40,1240);a.ty=clamp(a.y+rnd(-50,40),300,620);a.speed=rnd(55,90);a.timer=1.6;}});
     } else if(action.method==='retreat') {
       (this.crowdPolice||[]).forEach((p,i)=>{p.setTint(0x9a9d96);p.setData('aiTarget',{x:i%2?1050:230,y:412});});
@@ -1603,7 +1603,7 @@
     } else if(action.method==='physical'||action.method==='rubber'||action.method==='live') {
       const hostile=this.people.filter(a=>a.protester&&!a.detained); if(hostile.length) {
         const a=hostile.reduce((best,q)=>!best||Math.hypot(q.x-640,q.y-420)<Math.hypot(best.x-640,best.y-420)?q:best,null);
-        this.interactionMarks.push({type:'police-contact',x:a.x,y:a.y,expires:this.currentTime+1300});
+
         if(action.method==='physical'&&Math.random()<0.48){a.detained=true;a.detainedUntil=this.currentTime+9000;a.behavior='detained';a.speed=0;this.sim._radio('Полиция','Патруль',`Участник ${a.groupId||'неустановленной группы'} задержан; данные переданы в оперативный журнал.`,'warning','police');}
         else if(action.method!=='live'){a.behavior='flee';a.tx=clamp(a.x+(a.x<640?-1:1)*70,18,1262);a.speed=58;}
       }
@@ -1628,12 +1628,10 @@
     const x=1015,y=12,w=251,h=132;
     g.fillStyle(0x172226,.9);g.fillRoundedRect(x,y,w,h,4);
     g.lineStyle(1,0x9aab9f,.5);g.strokeRoundedRect(x,y,w,h,4);
-    g.fillStyle(0xcab98f,.8);g.fillRect(x+10,y+9,4,4);
-    g.fillStyle(0xe1ded0,.82);g.fillRect(x+17,y+11,66,1);
-    const nodes=[{id:'center',x:x+58,y:y+47},{id:'station',x:x+23,y:y+62},{id:'workers',x:x+89,y:y+66},{id:'ring',x:x+143,y:y+75},{id:'suburbs',x:x+195,y:y+43}];
-    const edges=[[0,1],[0,2],[2,3],[3,4],[1,2],[2,4]];
-    g.lineStyle(1,0x7f9186,.5);edges.forEach(([a,b])=>{g.beginPath();g.moveTo(nodes[a].x,nodes[a].y);g.lineTo(nodes[b].x,nodes[b].y);g.strokePath();});
-    nodes.forEach(n=>{const d=(s.districts||[]).find(v=>v.id===n.id)||{tension:30,blockage:0,crowd:0};const t=clamp(d.tension);const color=t>75?0xd56c5c:t>55?0xd4ad6a:0x7baca0;g.fillStyle(color,.9);g.fillRect(n.x-3,n.y-3,6,6);if(n.id===(s.activeDistrict||'center')){g.lineStyle(2,0xf1d7a5,.9);g.beginPath();g.moveTo(n.x-7,n.y);g.lineTo(n.x+7,n.y);g.moveTo(n.x,n.y-7);g.lineTo(n.x,n.y+7);g.strokePath();}});
+    g.fillStyle(0xe1ded0,.82);g.fillRect(x+10,y+11,73,1);
+    // The mini-map deliberately has no colored nodes, pucks, circles, or crosshair markers.
+    g.fillStyle(0x93a199,.55);g.fillRect(x+10,y+35,w-20,1);
+    g.fillStyle(0x93a199,.25);g.fillRect(x+10,y+57,w-20,1);
     g.fillStyle(0xbec8bf,.8);g.fillRect(x+10,y+91,w-20,1);
     const active=(s.districts||[]).find(d=>d.id===(s.activeDistrict||'center'))||{name:'Площадь',crowd:0,tension:0,blockage:0};
     const lines=[`${active.name.toUpperCase()}`,`ЯВКА ${Math.round(active.crowd||0)} · НАПРЯЖЕНИЕ ${Math.round(active.tension||0)}%`,`ДОРОГИ ${Math.round((active.blockage||0)*100)}% · ДЕНЬ ${s.day} ${String(s.hour).padStart(2,'0')}:${String(s.minute||0).padStart(2,'0')}`];
