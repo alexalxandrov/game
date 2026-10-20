@@ -1,11 +1,9 @@
 'use strict';
 
 (function bootKontur() {
-  const SAVE_KEY = 'kontur-republic-save-v6';
-  const LEGACY_SAVE_KEY = 'kontur-republic-save-v5';
-  const LEGACY_SAVE_KEY_V4 = 'kontur-republic-save-v4';
-  const LEGACY_SAVE_KEY_V3 = 'kontur-republic-save-v3';
-  const LEGACY_SAVE_KEY_V2 = 'kontur-republic-save-v2';
+  const SAVE_KEY = 'kontur-republic-save-v7_2';
+  // Previous versions remain available through the explicit Load button; do not auto-restore a runaway v6 autosave.
+  const LEGACY_SAVE_KEYS = ['kontur-republic-save-v7_1','kontur-republic-save-v7','kontur-republic-save-v6','kontur-republic-save-v5','kontur-republic-save-v4','kontur-republic-save-v3','kontur-republic-save-v2'];
 
   function showFatal(message) {
     const parent = document.getElementById('game-container');
@@ -22,25 +20,20 @@
     // Initialise the government/economy panels even if the external graphics CDN is unreachable.
     window.gameSimulation = new RepublicSimulation();
     try {
-      let saved = localStorage.getItem(SAVE_KEY);
-      let migrated = false;
-      if (!saved) {
-        saved = localStorage.getItem(LEGACY_SAVE_KEY);
-        if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V4);
-        if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V3);
-        if (!saved) saved = localStorage.getItem(LEGACY_SAVE_KEY_V2);
-        migrated = Boolean(saved);
-      }
+      const saved = localStorage.getItem(SAVE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const supported = parsed && parsed.state && Array.isArray(parsed.companies) &&
-          (parsed.version === GAME_CONFIG.version || (['2.','3.','4.','5.'].some(prefix => String(parsed.version || '').startsWith(prefix))));
+        const supported = parsed && parsed.state && Array.isArray(parsed.companies) && parsed.version === GAME_CONFIG.version;
         if (supported) {
           window.gameSimulation.loadSnapshot(parsed);
-          document.getElementById('last-save-label').textContent = migrated
-            ? 'СТАРОЕ СОХРАНЕНИЕ АДАПТИРОВАНО К v6'
-            : 'АВТОВОССТАНОВЛЕНО ИЗ БРАУЗЕРА';
+          document.getElementById('last-save-label').textContent = 'АВТОВОССТАНОВЛЕНО ИЗ v7.2';
+        } else if (LEGACY_SAVE_KEYS.some(key => Boolean(localStorage.getItem(key))) || saved) {
+          const label = document.getElementById('last-save-label');
+          if (label) label.textContent = 'НОВАЯ СИМУЛЯЦИЯ · ПРЕДЫДУЩЕЕ СОХРАНЕНИЕ ДОСТУПНО ЧЕРЕЗ «ЗАГРУЗИТЬ»';
         }
+      } else if (LEGACY_SAVE_KEYS.some(key => Boolean(localStorage.getItem(key)))) {
+        const label = document.getElementById('last-save-label');
+        if (label) label.textContent = 'НОВАЯ СИМУЛЯЦИЯ · СТАРОЕ СОХРАНЕНИЕ ДОСТУПНО ЧЕРЕЗ «ЗАГРУЗИТЬ»';
       }
     } catch (err) {
       console.warn('Автозагрузка пропущена:', err);

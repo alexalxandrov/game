@@ -29,9 +29,83 @@ const context = {
 };
 window.Phaser = Phaser;
 vm.createContext(context);
-for (const file of ['js/config.js','js/utils.js','js/simulation.js','js/world.js','js/ui.js','js/crisis.js','js/v4.js','js/v5.js','js/v6.js']) {
+for (const file of ['js/config.js','js/utils.js','js/simulation.js','js/world.js','js/ui.js','js/crisis.js','js/v4.js','js/v5.js','js/v6.js','js/v7.js','js/v7_2.js']) {
   vm.runInContext(fs.readFileSync(path.join(process.cwd(), file), 'utf8'), context, { filename: file });
 }
+
+
+// A fresh/reset campaign must begin calm, with complete world state and no phantom emergencies.
+const fresh = new window.RepublicSimulation();
+assert.ok(fresh.state.crowdTarget < 250, 'fresh attendance starts as a small gathering');
+assert.ok(fresh.state.crowdAnger < 50, 'fresh anger starts low and rises gradually');
+assert.ok(Array.isArray(fresh.state.assets) && fresh.state.assets.length >= 5, 'fresh reset restores flammable world assets');
+assert.equal(fresh.state.fireZones.length, 0, 'fresh campaign starts without active fires');
+assert.equal(fresh.state.incidents.length, 0, 'fresh campaign starts without staged crisis incidents');
+assert.equal(fresh.state.campSites.length, 0, 'fresh campaign starts without prebuilt camps');
+for (let i = 0; i < 60; i++) fresh.tick(1);
+assert.ok(fresh.state.crowdTarget < 160, 'attendance must not surge to thousands in the first real minute');
+assert.equal(fresh.state.fireZones.length, 0, 'no source means no startup fire');
+assert.ok(fresh.state.crowdTarget < 650, 'first model hour cannot jump to a full city demonstration');
+assert.equal(fresh.state.fireZones.length, 0, 'calm first hour cannot create fire without a source');
+assert.equal(fresh.state.campSites.length, 0, 'small calm gathering cannot instantly spawn tents');
+const oneDay = new window.RepublicSimulation();
+for (let i = 0; i < 24 * 60; i++) oneDay.tick(1);
+assert.ok(oneDay.state.crowdTarget < 250, 'a peaceful campaign cannot silently mobilize the whole city in a day');
+assert.equal(oneDay.state.fireZones.length, 0, 'no unrelated fire incident appears during a peaceful opening day');
+assert.equal(oneDay.state.campSites.length, 0, 'camps do not appear without sustained mass mobilisation');
+assert.ok(oneDay.state.crowdAnger < 100, 'ambient anger builds gradually during an ordinary day');
+const highRageButCalmCrowd = new window.RepublicSimulation();
+highRageButCalmCrowd.state.crowdAnger = 1000;
+highRageButCalmCrowd.state.crowdTarget = 38;
+for (let i = 0; i < 60; i++) highRageButCalmCrowd.tick(1);
+assert.ok(highRageButCalmCrowd.state.crowdTarget < 500, 'even an artificially high anger value cannot summon thousands instantly');
+const arrestOutflow = new window.RepublicSimulation();
+const noArrestsEstimate = arrestOutflow._estimateCrowdSize();
+arrestOutflow.state.arrests = 50;
+assert.ok(arrestOutflow._estimateCrowdSize() < noArrestsEstimate, 'arrests reduce the next turnout estimate');
+assert.ok(arrestOutflow.state.movementGoal && arrestOutflow.state.movementGoal.title, 'movement has an explicit goal record, not just a crowd count');
+
+const dayEstimate = fresh._estimateCrowdSize();
+fresh.state.hour = 2; fresh.state.minute = 0;
+const nightEstimate = fresh._estimateCrowdSize();
+assert.ok(nightEstimate < dayEstimate, 'expected turnout falls after night begins');
+assert.ok(fresh.state.crowdObjective && fresh.state.crowdObjective.length > 8, 'the crowd has an explicit stable political objective');
+const angerStart = fresh.state.crowdAnger;
+fresh.state.policies.tax = 100; fresh.state.policies.welfare = 0;
+for (let i = 0; i < 20; i++) fresh.tick(1);
+assert.ok(fresh.state.crowdAnger > angerStart, 'anger rises in small increments under harsh policy instead of starting at a high level');
+assert.ok(fresh.state.crowdAnger < angerStart + 20, 'ambient grievance does not cause an instant rage spike');
+const nightCrowd = new window.RepublicSimulation();
+nightCrowd.state.hour = 2; nightCrowd.state.minute = 0; nightCrowd.state.crowdAnger = 240; nightCrowd.state.crowdTarget = 1800;
+for (let i = 0; i < 20; i++) nightCrowd.tick(1);
+assert.ok(nightCrowd.state.crowdTarget < 1800, 'attendance actually falls at night, not only the estimate');
+const overnight = new window.RepublicSimulation();
+overnight.state.hour=22; overnight.state.minute=0; overnight.state.crowdAnger=240; overnight.state.crowdTarget=1800;
+for(let i=0;i<8*60;i++) overnight.tick(1);
+assert.ok(overnight.state.crowdTarget < 500, 'night-time departures must reduce actual attendance over a full night');
+
+const campTest = new window.RepublicSimulation();
+campTest.state.hoursElapsed = 16; campTest.state.crowdTarget = 1800; campTest.state.crowdAnger = 500;
+campTest.state.lastCampGrowthAt = 0; campTest.state.v7CampPressureHours = 4;
+const campOldRandom = testMath.random; testMath.random = () => 0.01;
+campTest._v5MaybeGrowCamps(); testMath.random = campOldRandom;
+assert.equal(campTest.state.campSites.length, 1, 'a camp appears only after sustained mobilisation, one site at a time');
+assert.equal(campTest.state.campSites[0].tentCount, 1, 'new camp starts with one tent instead of appearing fully built');
+assert.equal(campTest.state.fireZones.length, 0, 'building a camp does not create fire');
+const resetTest = new window.RepublicSimulation();
+resetTest.state.crowdTarget = 5000; resetTest.state.crowdAnger = 0;
+resetTest.state.fireZones = [{id:'ghost-fire',x:640,y:420,condition:'Горит',source:'random'}];
+resetTest.state.campSites = [{id:'ghost-camp',x:600,y:500,condition:'Горит',tentCount:5}];
+resetTest.state.incidents = [{id:'ghost-riot',type:'arson',status:'active'}];
+resetTest.reset();
+assert.ok(resetTest.state.crowdTarget < 250 && resetTest.state.crowdAnger < 50, 'manual reset returns to a calm, small gathering');
+assert.equal(resetTest.state.fireZones.length, 0, 'manual reset clears runaway fire zones');
+assert.equal(resetTest.state.campSites.length, 0, 'manual reset removes unearned starting camps');
+for (let i = 0; i < 60; i++) resetTest.tick(1);
+assert.ok(resetTest.state.crowdTarget < 160, 'one minute after reset still has a small gradual crowd');
+assert.equal(resetTest.state.fireZones.length, 0, 'reset cannot relight old fires on the next tick');
+assert.equal(resetTest.state.campSites.length, 0, 'reset cannot restore phantom camps on the next tick');
+
 
 const sim = new window.RepublicSimulation();
 assert.equal(sim.config.minutesPerTick, 1, 'configuration must model one minute per tick');
@@ -127,7 +201,7 @@ clashScene._v6StartStreetClash(clashState);
 testMath.random = secondRandomClash;
 assert.ok(recordedInjuries.some(injury => injury.source === 'police'), 'police-initiated street violence can injure a protester');
 const snap = crisis.snapshot();
-assert.equal(snap.version, '6.0.0', 'save carries current project version');
+assert.equal(snap.version, '7.2.0', 'save carries current project version');
 assert.ok(crisis.state.forceCap >= 4, 'v6 autonomous police use a hardline baseline');
 assert.ok(crisis.state.v6Organization >= 0 && crisis.state.v6Organization <= 100, 'crowd organization remains bounded');
 
@@ -137,7 +211,7 @@ tacticalSim.state.crowdAnger = 500; tacticalSim.state.forceCap = 7;
 tacticalSim.state.policeTools = { gas: 20, water: 20, flash: 20, rubber: 30, live: 4 };
 const tacticalScene = Object.create(window.RepublicCityScene.prototype);
 tacticalScene.sim = tacticalSim; tacticalScene.currentTime = 0; tacticalScene.v6TacticalTimer = 0;
-tacticalScene.v6LastActionRealMs = -99999; tacticalScene.v6LastScuffleAt = -99999;
+tacticalScene.v6LastActionRealMs = -99999; tacticalScene.v6LastScuffleAt = -99999; tacticalScene.v7PoliceFirstActionAfterMs = 1; tacticalScene.v7NextActionAtMs = 0; tacticalScene.v7PoliceElapsedMs = 0;
 tacticalScene.people = []; tacticalScene.crowdPolice = []; tacticalScene.v6FightFlashes = [];
 const oldTacticalRandom = testMath.random; testMath.random = () => 0.01;
 for (let i = 1; i <= 80; i++) { tacticalScene.currentTime = i * 16.67; tacticalScene._v6SchedulePoliceAction(16.67, tacticalSim.state); }
@@ -170,4 +244,4 @@ testScene._updateTraffic(0.05, testScene.sim.state);
 assert.equal(testScene.trafficCars[0].x, stoppedX, 'burning vehicle remains fixed in the road');
 assert.equal(testScene.trafficCars[0].speed, 0, 'burning vehicle speed is zero');
 
-console.log('PASS: clock, calm camps, persistent asset fire/smoke, autonomous hardline police, coordinated gas response, radicalization, 0–1000 anger, save/load, causal barricade fire and stopped burning traffic');
+console.log('PASS: paced clock, clean calm start, no phantom camps/fires, persistent sourced asset fire/smoke, autonomous police cadence, gradual turnout, gas cohesion, crowd objectives, radicalization, 0–1000 anger, v7.2 save/load, causal barricade fire and stopped burning traffic');
