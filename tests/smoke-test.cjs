@@ -34,6 +34,18 @@ for (const file of ['js/config.js','js/utils.js','js/simulation.js','js/world.js
 }
 
 
+// v8.1 presentation and logistics regressions: explicit button contrast, modal decisions, real fire geometry and dispatch queues.
+const v8Source = fs.readFileSync(path.join(process.cwd(), 'js/v8.js'), 'utf8');
+const cssSource = fs.readFileSync(path.join(process.cwd(), 'style.css'), 'utf8');
+const worldSource = fs.readFileSync(path.join(process.cwd(), 'js/world.js'), 'utf8');
+const crisisSource = fs.readFileSync(path.join(process.cwd(), 'js/crisis.js'), 'utf8');
+assert.ok(v8Source.includes('v8-decision-overlay') && v8Source.includes('aria-modal=\"true\"'), 'political decisions use a blocking modal');
+assert.ok(v8Source.includes('scene.v8DispatchQueue.push(order)'), 'service vehicles beyond the active cap are queued, not spawned into traffic at once');
+assert.ok(cssSource.includes('.v8-systems-panel .v8-actions button') && cssSource.includes('color:#f2f5ed!important'), 'new control buttons have explicit high-contrast text');
+assert.ok(crisisSource.includes("z.condition === 'Потушено' && (z.smokeLife || 0) > 0"), 'smoke persists after flame extinguishing');
+assert.ok(crisisSource.includes('g.fillPoints(pts,true)'), 'fire uses irregular layered flame geometry rather than tiny triangular icons');
+assert.ok(worldSource.includes('No floating circular status markers') || !worldSource.includes('this.fx.fillCircle(inc.x'), 'old incident puck markers are removed');
+
 // A fresh/reset campaign must begin calm, with complete world state and no phantom emergencies.
 const fresh = new window.RepublicSimulation();
 assert.ok(fresh.state.crowdTarget < 250, 'fresh attendance starts as a small gathering');
@@ -201,7 +213,7 @@ clashScene._v6StartStreetClash(clashState);
 testMath.random = secondRandomClash;
 assert.ok(recordedInjuries.some(injury => injury.source === 'police'), 'police-initiated street violence can injure a protester');
 const snap = crisis.snapshot();
-assert.equal(snap.version, '9.0.0', 'save carries current project version');
+assert.equal(snap.version, '8.1.0', 'save carries current project version');
 assert.ok(crisis.state.forceCap >= 4, 'v6 autonomous police use a hardline baseline');
 assert.ok(crisis.state.v6Organization >= 0 && crisis.state.v6Organization <= 100, 'crowd organization remains bounded');
 

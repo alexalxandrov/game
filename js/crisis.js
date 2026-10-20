@@ -360,7 +360,7 @@
       if (inc.spreadCooldown > 0) inc.spreadCooldown -= 1;
       s.pollution = clamp(s.pollution + 0.16 * inc.fireIntensity, 0, 100);
     }
-    s.fireZones = s.fireZones.filter(z => activeFires.some(i => i.id === z.id));
+    s.fireZones = s.fireZones.filter(z => activeFires.some(i => i.id === z.id) || (z.condition === 'Потушено' && (z.smokeLife || 0) > 0));
     // A structure stops burning after every nearby active source is contained; repairs can then begin.
     for (const asset of s.assets) {
       if (asset.condition === 'Горит') {
@@ -1511,19 +1511,47 @@
     original._renderEnvironment.call(this,s,time);
     const g=this.fx; if(!g) return;
     // Larger fire areas, drifting smoke, damaged building and barricade silhouettes.
-    (s.fireZones||[]).forEach(z=>{
-      if(z.condition==='Потушено'){const left=clamp((z.smokeLife||0)/20,0,1);if(left>0){const smoke=Math.max(18,z.smokeRadius||32);g.fillStyle(0x353d3d,.09*left);g.fillEllipse((z.x||0)+(z.windDrift||0),(z.y||0)-smoke*.4,smoke*2.1,smoke*.85);for(let k=0;k<3;k++){const up=(time*.006+k*12)%(smoke+18);g.fillStyle(0x4b5251,.045*left);g.fillEllipse((z.x||0)+Math.sin(time*.001+k)*smoke*.2,(z.y||0)-up-10,9+up*.25,7+up*.2);}}return;}
-      const pulse=.65+Math.sin(time*.013+(z.x||0))*.16;
-      const radius=Math.max(12,z.radius||18), smoke=Math.max(radius,z.smokeRadius||32);
-      g.fillStyle(0x292f31,0.045);g.fillEllipse((z.x||0)+(z.windDrift||0), (z.y||0)-smoke*.22,smoke*2.15,smoke*1.05);
-      for(let k=0;k<4;k++) {
-        const drift=Math.sin(time*.0015+k*2.1+(z.x||0))*(smoke*.24);
-        const up=(time*.012+k*15)%(smoke+28);
-        g.fillStyle(0x454c4b,Math.max(.02,.12-up/(smoke+28)*.08));g.fillCircle((z.x||0)+(z.windDrift||0)+drift,(z.y||0)-up-14,8+up*.20);
+    const drawFlame=(x,y,w,h,phase,alpha=1)=>{
+      const sway=Math.sin(time*.003+phase)*w*.10;
+      const pts=[{x:x-w*.48,y:y},{x:x-w*.42+sway*.2,y:y-h*.22},{x:x-w*.29+sway,y:y-h*.45},{x:x-w*.24-sway*.3,y:y-h*.67},{x:x-w*.08+sway*.5,y:y-h},{x:x+w*.04+sway*.6,y:y-h*.76},{x:x+w*.24-sway*.4,y:y-h*.87},{x:x+w*.20-sway*.3,y:y-h*.58},{x:x+w*.43+sway*.4,y:y-h*.35},{x:x+w*.48,y:y},{x:x+w*.17,y:y+h*.04},{x:x-w*.17,y:y+h*.03}];
+      g.fillStyle(0x8c2b19,.18*alpha);g.fillPoints(pts,true);
+      const inner=pts.map((p,i)=>({x:x+(p.x-x)*.58,y:y+(p.y-y)*.72+(i===4||i===5? h*.10:0)}));
+      g.fillStyle(0xf06a2d,.78*alpha);g.fillPoints(inner,true);
+      const core=[{x:x-w*.18,y:y},{x:x-w*.13,y:y-h*.24},{x:x-w*.04,y:y-h*.51},{x:x+w*.02,y:y-h*.69},{x:x+w*.13,y:y-h*.46},{x:x+w*.18,y:y},{x:x-w*.05,y:y+h*.01}];
+      g.fillStyle(0xffc16a,.82*alpha);g.fillPoints(core,true);
+      const hot=[{x:x-w*.09,y:y},{x:x-w*.06,y:y-h*.21},{x:x+w*.01,y:y-h*.40},{x:x+w*.08,y:y-h*.20},{x:x+w*.10,y:y}];g.fillStyle(0xffe5a0,.82*alpha);g.fillPoints(hot,true);
+    };
+    (s.fireZones||[]).forEach((z,zi)=>{
+      const x=Number(z.x)||640,y=Number(z.y)||420,intensity=clamp(z.intensity??.7,0,1.5),radius=Math.max(18,z.radius||25),smoke=Math.max(48,z.smokeRadius||72),drift=z.windDrift||0;
+      if(z.condition==='Потушено'){
+        const left=clamp((z.smokeLife||0)/30,0,1);if(left>0){for(let k=0;k<9;k++){const t=(time*.010+k*13+zi*7)%(smoke+55),sx=x+drift+t*.20+Math.sin(time*.0008+k*2)*smoke*.18,sy=y-18-t;const rr=12+t*.19;g.fillStyle(0x303837,Math.max(.015,.105*(1-t/(smoke+55))*left));g.fillEllipse(sx,sy,rr*1.65,rr*1.35);g.fillStyle(0x59615e,.025*left);g.fillEllipse(sx-rr*.2,sy-rr*.1,rr*1.1,rr*.8);}}return;
       }
-      g.fillStyle(0xef8039,.075+pulse*.045);g.fillEllipse(z.x,z.y+1,radius*3.25,radius*.78);
-      g.fillStyle(0xdf6334,.14+pulse*.07);g.fillEllipse(z.x,z.y,radius*1.7,radius*.46);
-      for(let i=0;i<5;i++){const fx=z.x+Math.sin(time*.009+i*2.5)*radius*.25;const fy=z.y-(time*.014+i*8)%(radius+26);g.fillStyle(i%2?0xffbc65:0xe35e32,.55);g.fillTriangle(fx-4,fy,fx+4,fy,fx,fy-10);}
+      // Smoke column: overlapping soft-edged, drifting masses, persistent while the fuel remains hot.
+      for(let k=0;k<12;k++){
+        const phase=time*.00045+k*1.73+zi*3.1, rise=(time*.010+k*17+zi*11)%(smoke+75), rr=13+rise*.23+(k%3)*4;
+        const sx=x+drift+Math.sin(phase)*smoke*.24+Math.cos(phase*.7)*8,sy=y-12-rise;
+        const opacity=Math.max(.018,.14*(1-rise/(smoke+75)))*(0.72+intensity*.25);
+        g.fillStyle(k%3===0?0x252d2d:k%3===1?0x39403e:0x555a55,opacity);g.fillEllipse(sx,sy,rr*1.8,rr*1.35);
+        g.fillStyle(0x77776c,opacity*.18);g.fillEllipse(sx-rr*.2,sy-rr*.15,rr*.95,rr*.7);
+      }
+      // Low heat shimmer, ember bed and irregular multi-layer flame tongues rather than flame icons.
+      const pulse=.86+Math.sin(time*.006+zi*2)*.07, baseW=radius*(1.5+intensity*.45), baseY=y+4;
+      g.fillStyle(0x1c2423,.35);g.fillEllipse(x+drift,baseY+5,baseW*2.1,Math.max(8,radius*.45));
+      g.fillStyle(0x9b321b,.22);g.fillEllipse(x+drift,baseY,baseW*1.75,Math.max(8,radius*.36));
+      // One connected flame body with a broken, turbulent silhouette—not separate little tongues or icon triangles.
+      drawFlame(x+drift,baseY,baseW*1.48,radius*(1.32+intensity*.28)*pulse,time*.002+zi,.88);
+      drawFlame(x+drift+Math.sin(time*.002+zi)*radius*.08,baseY-radius*.04,baseW*.82,radius*(1.82+intensity*.30)*pulse,time*.002+zi+2.4,.96);
+      // Broad turbulent sheets of hot gas blend into the main body; irregular edges evolve with time.
+      for(let layer=0;layer<3;layer++){
+        const yy=baseY-radius*(.24+layer*.18), ww=baseW*(.76-layer*.13), sway=Math.sin(time*.003+layer*2.3+zi)*radius*.18;
+        const pts=[{x:x-ww*.52+sway,y:yy},{x:x-ww*.42,y:yy-radius*.16},{x:x-ww*.23-sway*.25,y:yy-radius*(.28+layer*.03)},{x:x-.03*ww+sway*.4,y:yy-radius*.18},{x:x+ww*.18+sway*.2,y:yy-radius*(.31-layer*.025)},{x:x+ww*.43,y:yy-radius*.12},{x:x+ww*.52-sway,y:yy+radius*.03},{x:x+ww*.22,y:yy+radius*.04},{x:x-ww*.24,y:yy+radius*.02}];
+        g.fillStyle(layer===0?0xf47b31:layer===1?0xffb34f:0xffd987,.16+intensity*.08);g.fillPoints(pts,true);
+      }
+      // Roof fire crawls laterally as a single low continuous front; vehicle fire wraps the chassis.
+      if(z.source==='roof_fire'||z.source==='building_fire')drawFlame(x+drift,y+3,baseW*1.9,radius*(.78+intensity*.12),time*.002+zi+4,.82);
+      if(z.source==='vehicle_fire'){g.fillStyle(0x171d1d,.45);g.fillEllipse(x,y+4,radius*2.4,radius*.35);drawFlame(x,y+2,radius*2.1,radius*1.25,time*.002+zi,.88);}
+      // Sparks are short, dim streaks, not colored dots/circles.
+      for(let i=0;i<4;i++){const ex=x+Math.sin(time*.004+i*4+zi)*baseW*.7,ey=baseY-((time*.05+i*19+zi*7)%(radius*1.4));g.lineStyle(1,0xffb85f,.45);g.beginPath();g.moveTo(ex,ey);g.lineTo(ex+Math.sin(i+time*.002)*3,ey-4);g.strokePath();}
     });
     (s.gasZones||[]).forEach(z=>{
       const radius=z.radius||90;const a=clamp((z.life||0)/3,.02,.22);
@@ -1542,7 +1570,7 @@
     (s.assets||[]).filter(a=>a.condition==='Повреждён'||a.condition==='Сильно повреждён'||a.condition==='Разрушен'||a.condition==='Горит').forEach(a=>{
       const r=Math.max(7,(a.radius||18)*.52);const col=a.condition==='Горит'?0xe2753a:a.condition==='Разрушен'?0x252a29:0x9f5549;
       g.fillStyle(col,a.condition==='Горит'?.18:.11);g.fillEllipse(a.x,a.y+2,r*2.5,r*.72);
-      if(a.condition==='Горит'){g.fillStyle(0xf8a14b,.8);g.fillTriangle(a.x-3,a.y,a.x+3,a.y,a.x,a.y-9);}
+      if(a.condition==='Горит'){drawFlame(a.x,a.y+3,r*.75,r*1.8,time*.002+a.x,.75);}
     });
     // Building condition is visible as the seal/cornice loses integrity.
     if(s.building && s.building.integrity<100) {
@@ -1551,13 +1579,13 @@
       for(let i=0;i<Math.floor(damage*9);i++){const x=516+i*29;g.lineStyle(1.5,0x463d36,.8);g.beginPath();g.moveTo(x,138);g.lineTo(x+5,155+i%4*7);g.lineTo(x+2,173+i%5*5);g.strokePath();}
     }
     const smokeLevel=(s.fireZones||[]).reduce((v,z)=>v+(z.smokeRadius||0)/900,0)+(s.gasZones||[]).reduce((v,z)=>v+(z.kind==='gas'?0.07:0.025),0);
-    if(smokeLevel>0.05) {g.fillStyle(0x656e6b,Math.min(.28,smokeLevel));g.fillRect(0,260,1280,300);}
+    // Keep smoke localized to its physical plume; never cover the whole plaza with a flat gray overlay.
     // Sector map and status remain pinned to the screen while the live camera moves.
     this._renderFixedCrisisHUD(s,time);
     // Damaged/burning road traffic reflects condition changes without replacing the live camera.
     for(const car of this.trafficCars||[]) {
       if(car.condition==='Брошен') {g.lineStyle(2,0xd0ad71,.5);g.beginPath();g.moveTo(car.x-8,car.y-4);g.lineTo(car.x+8,car.y+4);g.moveTo(car.x+8,car.y-4);g.lineTo(car.x-8,car.y+4);g.strokePath();}
-      if(car.condition==='Горит') {const flicker=.6+Math.sin(time*.04+car.x)*.25;g.fillStyle(0xec743b,flicker*.18);g.fillEllipse(car.x,car.y-3,35,13);g.fillStyle(0xffb764,flicker);g.fillTriangle(car.x-6,car.y-4,car.x,car.y-20,car.x+6,car.y-4);g.fillStyle(0x484d4a,.2);g.fillEllipse(car.x-3,car.y-18,11,6);}
+      if(car.condition==='Горит') {const flicker=.7+Math.sin(time*.04+car.x)*.18;g.fillStyle(0x202624,.28);g.fillEllipse(car.x,car.y-3,35,13);drawFlame(car.x,car.y-1,27,25,time*.002+car.x,flicker*.82);}
     }
   };
 
@@ -1670,7 +1698,7 @@
     original.updateStats.call(this);
     const s=this.sim.state;
     const pm=document.getElementById('prime-minister-name');if(pm)pm.textContent=s.primeMinister||'Ирина Волкова';
-    const ver=document.querySelector('.app-footer span');if(ver)ver.textContent='КОНТУР // ВЕРСИЯ 9.0.0';
+    const ver=document.querySelector('.app-footer span');if(ver)ver.textContent='КОНТУР // ВЕРСИЯ 8.0.0';
     const mode=document.getElementById('state-mode');if(mode) {mode.textContent=s.stateMode||'Обычное управление';mode.className=`state-mode ${s.stateModeCode||'normal'}`;}
     const active=(s.districts||[]).find(d=>d.id===(s.activeDistrict||'center'));
     const subtitle=document.getElementById('world-subtitle');if(subtitle&&active)subtitle.textContent=`Камера мониторинга: ${active.name} · напряжённость ${Math.round(active.tension)}% · загрузка дорог ${Math.round(active.blockage*100)}%`;
