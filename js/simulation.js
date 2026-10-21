@@ -155,7 +155,7 @@ class RepublicSimulation {
     s.mobilizationSurge *= 0.94;
     s.crowdTarget = Math.round(s.crowdTarget * 0.48 + this._estimateCrowdSize() * 0.52);
     const attendanceRatio = s.crowdTarget / Math.max(1, s.cityPopulation);
-    s.roadBlockage = SIM_U.clamp((attendanceRatio - 0.09) * 1.45 + s.activeStrikes * 0.12 + (tension > 70 ? 0.12 : 0), 0.02, 0.98);
+    s.roadBlockage = SIM_U.clamp(SIM_U.clamp((attendanceRatio - 0.09) * 1.45 + s.activeStrikes * 0.12 + (tension > 70 ? 0.12 : 0), 0.02, 0.98) + ((Number(s.v11SitInUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.08 : 0) - (Number(s.v10Crowd?.chainUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.06 : 0) - (Number(s.v12MinimumServiceUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.035 : 0) - (Number(s.v12TransportCommissionUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.02 : 0) - (Number(s.v12TransportSubsidyUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.04 : 0)), 0.02, 0.98);
     s.protestPhase = tension > 82 ? 'Столкновения и локальные пожары' : tension > 68 ? 'Массовая мобилизация · движение затруднено' : attendanceRatio > 0.34 ? 'Многотысячное собрание' : tension > 48 ? 'Марш и переговорные требования' : 'Гражданское собрание';
 
     const incidentChance = tension > 82 ? 0.19 : tension > 70 ? 0.105 : tension > 55 ? 0.055 : tension > 42 ? 0.027 : 0.012;
@@ -261,7 +261,7 @@ class RepublicSimulation {
     this._changeWeather();
     s.crimeIndex = SIM_U.clamp(s.crimeIndex + (s.tension - 42) * 0.025 - p.policing * 0.003 + SIM_U.random(-0.8, 0.8), 6, 95);
     s.crowdTarget = this._estimateCrowdSize();
-    s.roadBlockage = SIM_U.clamp((s.crowdTarget / Math.max(1, s.cityPopulation) - 0.09) * 1.45 + s.activeStrikes * 0.12 + (s.tension > 70 ? 0.12 : 0), 0.02, 0.98);
+    s.roadBlockage = SIM_U.clamp(SIM_U.clamp((s.crowdTarget / Math.max(1, s.cityPopulation) - 0.09) * 1.45 + s.activeStrikes * 0.12 + (s.tension > 70 ? 0.12 : 0), 0.02, 0.98) + ((Number(s.v11SitInUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.08 : 0) - (Number(s.v10Crowd?.chainUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.06 : 0) - (Number(s.v12MinimumServiceUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.035 : 0) - (Number(s.v12TransportCommissionUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.02 : 0) - (Number(s.v12TransportSubsidyUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.04 : 0)), 0.02, 0.98);
     if (s.emergencyDays > 0) this.announce(`ПРАВИТЕЛЬСТВО: действует режим чрезвычайного положения. До пересмотра режима — ${s.emergencyDays} дн.`, 'warning');
     else if (s.tension > 70) this.announce('ГОРОДСКОЕ ОПОВЕЩЕНИЕ: на центральной площади многолюдно. Используйте обозначенные проходы и выполняйте требования экстренных служб.', 'warning');
     else this.announce('ГОРОДСКОЕ ОПОВЕЩЕНИЕ: обстановка в центральном районе контролируется городскими службами.', 'info');
@@ -721,7 +721,7 @@ class RepublicSimulation {
     s.tension = this._calculateTension();
     if (typeof this._estimateCrowdSize === 'function') s.crowdTarget = Math.round((s.crowdTarget || 500) * 0.68 + this._estimateCrowdSize() * 0.32);
     const attendanceRatio = s.crowdTarget / Math.max(1, s.cityPopulation || this.config.cityPopulation || 5000);
-    s.roadBlockage = SIM_U.clamp((attendanceRatio - 0.09) * 1.45 + (s.activeStrikes || 0) * 0.12 + (s.tension > 70 ? 0.12 : 0), 0.02, 0.98);
+    s.roadBlockage = SIM_U.clamp(SIM_U.clamp((attendanceRatio - 0.09) * 1.45 + (s.activeStrikes || 0) * 0.12 + (s.tension > 70 ? 0.12 : 0), 0.02, 0.98) + ((Number(s.v11SitInUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.08 : 0) - (Number(s.v10Crowd?.chainUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.06 : 0) - (Number(s.v12MinimumServiceUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.035 : 0) - (Number(s.v12TransportCommissionUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.02 : 0) - (Number(s.v12TransportSubsidyUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.04 : 0)), 0.02, 0.98);
     s.protestPhase = s.tension > 82 ? 'Столкновения и локальные пожары' : s.tension > 68 ? 'Массовая мобилизация · движение затруднено' : attendanceRatio > 0.34 ? 'Многотысячное собрание' : s.tension > 48 ? 'Марш и переговорные требования' : 'Гражданское собрание';
     s.dailyRevenue = this._budgetEstimate().revenue;
     s.dailySpending = this._budgetEstimate().spending;

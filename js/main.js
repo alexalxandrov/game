@@ -1,9 +1,9 @@
 'use strict';
 
 (function bootKontur() {
-  const SAVE_KEY = 'kontur-republic-save-v9';
+  const SAVE_KEY = 'kontur-republic-save-v12';
   // Previous versions remain available through the explicit Load button; do not auto-restore a runaway v6 autosave.
-  const LEGACY_SAVE_KEYS = ['kontur-republic-save-v8_1','kontur-republic-save-v8-1','kontur-republic-save-v8','kontur-republic-save-v7_2','kontur-republic-save-v7_1','kontur-republic-save-v7','kontur-republic-save-v6','kontur-republic-save-v5','kontur-republic-save-v4','kontur-republic-save-v3','kontur-republic-save-v2'];
+  const LEGACY_SAVE_KEYS = ['kontur-republic-save-v11','kontur-republic-save-v10','kontur-republic-save-v9','kontur-republic-save-v9_0','kontur-republic-save-v8_1','kontur-republic-save-v8-1','kontur-republic-save-v8','kontur-republic-save-v7_2','kontur-republic-save-v7_1','kontur-republic-save-v7','kontur-republic-save-v6','kontur-republic-save-v5','kontur-republic-save-v4','kontur-republic-save-v3','kontur-republic-save-v2'];
 
   function showFatal(message) {
     const parent = document.getElementById('game-container');
@@ -23,7 +23,7 @@
       const saved = localStorage.getItem(SAVE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const supported = parsed && parsed.state && Array.isArray(parsed.companies) && (parsed.version === GAME_CONFIG.version || parsed.version === '8.1.0' || parsed.version === '9.0.0' || parsed.version === '8.0.0');
+        const supported = parsed && parsed.state && Array.isArray(parsed.companies) && (parsed.version === GAME_CONFIG.version || parsed.version === '11.0.0' || parsed.version === '10.0.0' || parsed.version === '9.0.0' || parsed.version === '8.1.0' || parsed.version === '8.0.0');
         if (supported) {
           window.gameSimulation.loadSnapshot(parsed);
           document.getElementById('last-save-label').textContent = 'АВТОВОССТАНОВЛЕНО ИЗ СОХРАНЕНИЯ';

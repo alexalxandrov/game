@@ -390,7 +390,7 @@
     const blockadePower = s.barricades.reduce((sum,b) => sum + (b.health/100) * 0.10,0);
     const firePower = s.fireZones.reduce((sum,z) => sum + Math.min(0.08,(z.area||0)*0.00025),0);
     const crowdRatio = (s.crowdTarget || 0) / Math.max(1,s.cityPopulation || 5000);
-    s.roadBlockage = clamp(0.025 + Math.max(0,crowdRatio - 0.08)*1.15 + (s.activeStrikes || 0)*0.115 + blockadePower + firePower + (s.tension > 75 ? 0.07 : 0),0.02,0.98);
+    s.roadBlockage = clamp(clamp(0.025 + Math.max(0,crowdRatio - 0.08)*1.15 + (s.activeStrikes || 0)*0.115 + blockadePower + firePower + (s.tension > 75 ? 0.07 : 0),0.02,0.98) + ((Number(s.v11SitInUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.08 : 0) - (Number(s.v10Crowd?.chainUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.06 : 0) - (Number(s.v12MinimumServiceUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.035 : 0) - (Number(s.v12TransportCommissionUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.02 : 0) - (Number(s.v12TransportSubsidyUntil||0) > ((Math.max(1, Number(s.day)||1)-1)*1440+(Number(s.hour)||0)*60+(Number(s.minute)||0)) ? 0.04 : 0)),0.02,0.98);
   };
 
   SP._updateDistricts = function(emit = true, stepTension = true) {
@@ -614,9 +614,19 @@
       s.policePresence=clamp(s.policePresence+5);
     }
     if (['gas','water','flash','physical','rubber','live'].includes(method)) {
-      const brutalityOdds = clamp(({gas:.11,water:.16,flash:.17,physical:.24,rubber:.37,live:.82})[method] + s.policeFatigue/450 + (s.doctrineCode==='disperse'?.16:0) - (s.doctrineCode==='contain'?.07:0),.02,.96);
+      const pressTeams = Math.max(0, Number(s.v10Media?.pressTeams)||0), streamers = Math.max(0, Number(s.v10Media?.streamers)||0), stewards = Math.max(0, Number(s.v10Crowd?.stewards)||0);
+      const pressExposure = Math.min(.22, pressTeams*.045 + streamers*.035);
+      const stewardshipEffect = Math.min(.12, stewards*.025);
+      const gameMinute = Math.max(1, Number(s.day)||1)*1440-1440+(Number(s.hour)||0)*60+(Number(s.minute)||0);
+      const observers = Math.max(0, Number(s.v10Crowd?.observers)||0);
+      const witnessEffect = Math.min(.07, observers*.012);
+      const liaisonEffect = Number(s.v11PoliceLiaisonUntil||0)>gameMinute ? (s.v11PoliceLiaisonMode==='mediated'?.075:.06) : 0;
+      const oversight = Number(s.v11PoliceOversight?.until||0)>gameMinute ? (Number(s.v11PoliceOversight.level)>=3?.085:Number(s.v11PoliceOversight.level)>=2?.055:Number(s.v11PoliceOversight.level)>=1?.025:0) : 0;
+      const charterActive=Number(s.v12ProtestCharterUntil||0)>gameMinute; const charterEffect=charterActive?(s.v12ProtestCharter==='joint'?.05:s.v12ProtestCharter==='neutral'?.03:0):0; const mandateActive=Number(s.v12AssemblyMandate?.until||0)>gameMinute&&s.v12AssemblyMandate?.status==='active'; const mandateEffect=mandateActive&&s.v12AssemblyMandate.choice==='peaceful'?.025:mandateActive&&s.v12AssemblyMandate.choice==='pause'?.015:0; const brutalityOdds = clamp(({gas:.11,water:.16,flash:.17,physical:.24,rubber:.37,live:.82})[method] + s.policeFatigue/450 + (s.doctrineCode==='disperse'?.16:0) - (s.doctrineCode==='contain'?.07:0) - pressExposure - stewardshipEffect - witnessEffect - liaisonEffect - oversight - charterEffect - mandateEffect,.02,.96);
       if (Math.random()<brutalityOdds) {
-        this._publishCrisisEvent('police','brutality','Поступили жалобы на непропорциональное применение силы','Независимые наблюдатели сообщают о спорном силовом эпизоде. Видеозаписи и показания направлены комиссии; общественный отклик зависит от свободы СМИ.',{severity:method==='live'?2.0:method==='rubber'?1.4:0.9,channel:'Гражданский',speaker:'Группа наблюдателей',tone:'critical',announce:'ОПЕРАТИВНОЕ СООБЩЕНИЕ: опубликована жалоба на применение силы. Просим не распространять неподтверждённые сведения; комиссия проверит обстоятельства.'});
+        const medicalActive = !!s.v11MedicalAidActive && Number(s.v11SupportUntil||0)>gameMinute;
+        const baseSeverity = method==='live'?2.0:method==='rubber'?1.4:0.9;
+        this._publishCrisisEvent('police','brutality','Поступили жалобы на непропорциональное применение силы','Независимые наблюдатели сообщают о спорном силовом эпизоде. Видеозаписи и показания направлены комиссии; общественный отклик зависит от свободы СМИ.',{severity:baseSeverity*(medicalActive?.72:1),channel:'Гражданский',speaker:'Группа наблюдателей',tone:'critical',announce:'ОПЕРАТИВНОЕ СООБЩЕНИЕ: опубликована жалоба на применение силы. Просим не распространять неподтверждённые сведения; комиссия проверит обстоятельства.'});
       }
       if(method==='rubber' || method==='live') s.investigationOpen=true;
     }
@@ -937,7 +947,11 @@
         this._radio('Пожарные','Наблюдатель','Огонь перекинулся на баррикаду в пределах соседнего очага; зона дыма расширяется.','critical','fire');
       }
     }
-    if(s.emergencyCorridor && now>(s.corridorUntil||0)) s.emergencyCorridor=false;
+    const v11GameMinute = Math.max(1, Number(s.day)||1)*1440-1440+(Number(s.hour)||0)*60+(Number(s.minute)||0);
+    const v11SupportActive = Number(s.v11SupportUntil||0)>v11GameMinute;
+    const v10ChainActive = Number(s.v10Crowd?.chainUntil||0)>v11GameMinute;
+    const v12CharterActive = Number(s.v12ProtestCharterUntil||0)>v11GameMinute;
+    if(s.emergencyCorridor && now>(s.corridorUntil||0) && !v11SupportActive && !v10ChainActive && !v12CharterActive) s.emergencyCorridor=false;
     s.gasZones=s.gasZones.filter(z=>z.life>0); s.smokeZones=s.smokeZones.filter(z=>z.life>0);
     s.gasZones.forEach(z=>z.life-=1); s.smokeZones.forEach(z=>z.life-=1);
     s.lastCrisisStep=now;
